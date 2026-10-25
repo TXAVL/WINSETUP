@@ -1949,7 +1949,7 @@ class TXAWinSetup(tk.Tk):
                         btn_action_frame, text="📥 Tải bộ cài Setup (.exe)",
                         bg=COLORS["accent"], fg="#FFFFFF", font=FONTS["small"],
                         relief="flat", padx=10, pady=4, cursor="hand2",
-                        command=lambda u=s_url: webbrowser.open(u)
+                        command=lambda r=res: self._open_download_modal(file_type="setup", update_info=r, parent_win=win)
                     ).pack(side="left", padx=(0, 8))
 
                 p_url = res.get("portable_url")
@@ -1958,7 +1958,7 @@ class TXAWinSetup(tk.Tk):
                         btn_action_frame, text="📦 Tải Portable (.exe)",
                         bg=COLORS["bg_card"], fg=COLORS["text_primary"], font=FONTS["small"],
                         relief="flat", padx=10, pady=4, cursor="hand2",
-                        command=lambda u=p_url: webbrowser.open(u)
+                        command=lambda r=res: self._open_download_modal(file_type="portable", update_info=r, parent_win=win)
                     ).pack(side="left", padx=(0, 8))
 
                 gh_url = res.get("releases_page")
@@ -1992,3 +1992,213 @@ class TXAWinSetup(tk.Tk):
             apply_result(pre_result)
         else:
             run_check()
+
+    def _open_download_modal(self, file_type: str, update_info: dict, parent_win=None):
+        """Mở cửa sổ tải về bản cập nhật với thanh tiến trình trực quan, hỗ trợ resume khi đứt mạng và tự động khởi chạy trình cài đặt."""
+        from core.updater import download_file_resumable
+        import threading, tempfile, subprocess
+        from pathlib import Path
+
+        if file_type == "setup":
+            file_name = update_info.get("setup_name", "TXAWinSetup_Setup.exe")
+            file_url = update_info.get("setup_url", "")
+            file_sha256 = update_info.get("setup_sha256", "")
+            file_size = update_info.get("setup_size", 0)
+            target_title = "Bộ cài đặt Windows Setup"
+        else:
+            file_name = update_info.get("portable_name", "TXAWinSetup_Portable.exe")
+            file_url = update_info.get("portable_url", "")
+            file_sha256 = update_info.get("portable_sha256", "")
+            file_size = update_info.get("portable_size", 0)
+            target_title = "Bản Portable độc lập"
+
+        if not file_url:
+            messagebox.showerror("Lỗi", "Không tìm thấy liên kết tải về cho tệp này!")
+            return
+
+        download_dir = Path(tempfile.gettempdir()) / "TXAWinSetup_Update"
+        download_dir.mkdir(parents=True, exist_ok=True)
+        dest_path = str(download_dir / file_name)
+
+        dlg = tk.Toplevel(parent_win or self)
+        dlg.title(f"Tải {target_title} — TXA WinSetup")
+        dlg.configure(bg=COLORS["bg_dark"])
+        dlg.geometry("520x330")
+        dlg.resizable(False, False)
+        dlg.transient(parent_win or self)
+        dlg.grab_set()
+
+        try:
+            dlg.update_idletasks()
+            pw = (parent_win or self).winfo_width()
+            ph = (parent_win or self).winfo_height()
+            px = (parent_win or self).winfo_x()
+            py = (parent_win or self).winfo_y()
+            x = px + max(0, (pw - 520) // 2)
+            y = py + max(0, (ph - 330) // 2)
+            dlg.geometry(f"520x330+{x}+{y}")
+        except Exception:
+            pass
+
+        # Header Frame
+        hdr = tk.Frame(dlg, bg=COLORS["bg_panel"], padx=18, pady=12)
+        hdr.pack(fill="x")
+        tk.Label(hdr, text=f"Tải bản cập nhật v{update_info.get('latest_version', '1.4.0')}",
+                 bg=COLORS["bg_panel"], fg=COLORS["text_primary"], font=FONTS["heading"]).pack(anchor="w")
+        tk.Label(hdr, text=f"{target_title} ({file_name})",
+                 bg=COLORS["bg_panel"], fg=COLORS["accent"], font=FONTS["small"]).pack(anchor="w", pady=(2, 0))
+
+        content = tk.Frame(dlg, bg=COLORS["bg_dark"], padx=20, pady=16)
+        content.pack(fill="both", expand=True)
+
+        # Status text
+        lbl_status = tk.Label(content, text="● Đang chuẩn bị tải xuống...", bg=COLORS["bg_dark"],
+                              fg=COLORS["info"], font=FONTS["body"], wraplength=480, justify="left")
+        lbl_status.pack(anchor="w", pady=(0, 10))
+
+        # Progress bar (Canvas custom giao diện mượt, màu sắc nổi bật)
+        canvas_w, canvas_h = 478, 20
+        pb_canvas = tk.Canvas(content, width=canvas_w, height=canvas_h, bg=COLORS["bg_input"],
+                              highlightthickness=1, highlightbackground=COLORS["border"])
+        pb_canvas.pack(fill="x", pady=(0, 8))
+        bar_rect = pb_canvas.create_rectangle(0, 0, 0, canvas_h, fill=COLORS["accent"], width=0)
+        text_pct = pb_canvas.create_text(canvas_w // 2, canvas_h // 2, text="0.0%", fill="#FFFFFF", font=FONTS["badge"])
+
+        # Stats info (Downloaded / Total + Speed + Remaining)
+        stats_frame = tk.Frame(content, bg=COLORS["bg_dark"])
+        stats_frame.pack(fill="x", pady=(0, 12))
+
+        lbl_bytes = tk.Label(stats_frame, text="0.0 MB / -- MB", bg=COLORS["bg_dark"],
+                             fg=COLORS["text_secondary"], font=FONTS["small"])
+        lbl_bytes.pack(side="left")
+
+        lbl_speed = tk.Label(stats_frame, text="0.0 KB/s", bg=COLORS["bg_dark"],
+                             fg=COLORS["text_secondary"], font=FONTS["small"])
+        lbl_speed.pack(side="right")
+
+        # Destination info
+        dest_box = tk.Frame(content, bg=COLORS["bg_card"], padx=10, pady=6)
+        dest_box.pack(fill="x", pady=(0, 10))
+        tk.Label(dest_box, text=f"Lưu tạm tại: {dest_path}", bg=COLORS["bg_card"],
+                 fg=COLORS["text_secondary"], font=("Segoe UI", 8), wraplength=460, justify="left").pack(anchor="w")
+
+        # Bottom buttons
+        bottom = tk.Frame(dlg, bg=COLORS["bg_panel"], padx=18, pady=10)
+        bottom.pack(fill="x", side="bottom")
+
+        btn_close = tk.Button(bottom, text="Đóng", bg=COLORS["bg_card"], fg=COLORS["text_secondary"],
+                              relief="flat", padx=14, pady=4, cursor="hand2")
+        btn_close.pack(side="right")
+
+        btn_action = tk.Button(bottom, text="Tạm dừng", bg=COLORS["bg_card"], fg=COLORS["text_primary"],
+                               relief="flat", padx=12, pady=4, cursor="hand2")
+        btn_action.pack(side="right", padx=8)
+
+        btn_install = tk.Button(bottom, text="⚡ Cài đặt ngay", bg=COLORS["accent"], fg="#FFFFFF",
+                                font=FONTS["body"], relief="flat", padx=14, pady=4, cursor="hand2")
+
+        # Control flags
+        cancel_event = threading.Event()
+        state = {"is_downloading": False, "is_finished": False, "dest_path": dest_path}
+
+        def update_progress(downloaded: int, total: int, speed: float, status: str):
+            if not dlg.winfo_exists():
+                return
+            pct = (downloaded / total * 100.0) if total > 0 else 0.0
+            fill_w = int(canvas_w * (pct / 100.0))
+            pb_canvas.coords(bar_rect, 0, 0, fill_w, canvas_h)
+            pb_canvas.itemconfigure(text_pct, text=f"{pct:.1f}%")
+
+            d_mb = downloaded / (1024 * 1024)
+            t_mb = total / (1024 * 1024) if total > 0 else 0.0
+            lbl_bytes.config(text=f"{d_mb:.2f} MB / {t_mb:.2f} MB ({pct:.1f}%)")
+
+            if speed >= 1024 * 1024:
+                sp_str = f"{speed / (1024 * 1024):.1f} MB/s"
+            elif speed >= 1024:
+                sp_str = f"{speed / 1024:.0f} KB/s"
+            else:
+                sp_str = f"{speed:.0f} B/s"
+
+            if speed > 0 and total > downloaded:
+                rem_sec = int((total - downloaded) / speed)
+                lbl_speed.config(text=f"{sp_str} • Còn ~{rem_sec}s")
+            else:
+                lbl_speed.config(text=sp_str)
+
+            lbl_status.config(text=f"● {status}", fg=COLORS["info"])
+
+        def launch_installer():
+            try:
+                subprocess.Popen([dest_path])
+                lbl_status.config(text="✅ Đã khởi chạy trình cài đặt! Đang thoát ứng dụng...", fg=COLORS["success"])
+                self.after(800, lambda: self.destroy())
+            except Exception as e:
+                lbl_status.config(text=f"❌ Không thể chạy trình cài đặt: {e}", fg=COLORS["error"])
+
+        def launch_portable():
+            try:
+                subprocess.Popen(f'explorer /select,"{dest_path}"', shell=True)
+            except Exception:
+                pass
+
+        def on_download_complete(success: bool, msg: str):
+            if not dlg.winfo_exists():
+                return
+            state["is_downloading"] = False
+            if success:
+                state["is_finished"] = True
+                pb_canvas.coords(bar_rect, 0, 0, canvas_w, canvas_h)
+                pb_canvas.itemconfigure(text_pct, text="100.0%")
+                btn_action.pack_forget()
+
+                if file_type == "setup":
+                    lbl_status.config(text="✅ Tải thành công! Đang tự động mở trình cài đặt trong 2 giây...", fg=COLORS["success"])
+                    btn_install.config(text="⚡ Cài đặt ngay", command=launch_installer)
+                    btn_install.pack(side="right", padx=8)
+                    dlg.after(2000, launch_installer)
+                else:
+                    lbl_status.config(text=f"✅ Tải Portable thành công! File đã sẵn sàng.", fg=COLORS["success"])
+                    btn_install.config(text="📂 Mở thư mục", command=launch_portable)
+                    btn_install.pack(side="right", padx=8)
+            else:
+                lbl_status.config(text=f"❌ {msg}", fg=COLORS["error"])
+                btn_action.config(text="⟳ Tiếp tục tải", fg=COLORS["accent"], command=start_download)
+
+        def download_worker():
+            state["is_downloading"] = True
+            cancel_event.clear()
+            success, msg = download_file_resumable(
+                url=file_url,
+                dest_path=dest_path,
+                expected_sha256=file_sha256,
+                expected_size=file_size,
+                progress_callback=lambda d, t, s, st: dlg.after(0, lambda: update_progress(d, t, s, st)),
+                cancel_event=cancel_event
+            )
+            if dlg.winfo_exists():
+                dlg.after(0, lambda: on_download_complete(success, msg))
+
+        def start_download():
+            if state["is_downloading"]:
+                return
+            btn_action.config(text="Tạm dừng", fg=COLORS["text_primary"], command=pause_download)
+            lbl_status.config(text="● Đang kết nối tải về...", fg=COLORS["info"])
+            t = threading.Thread(target=download_worker, daemon=True)
+            t.start()
+
+        def pause_download():
+            cancel_event.set()
+            btn_action.config(text="⟳ Tiếp tục tải", fg=COLORS["accent"], command=start_download)
+            lbl_status.config(text="⏸ Đã tạm dừng tải. Bấm 'Tiếp tục tải' để tải tiếp phần còn lại.", fg=COLORS["warning"])
+
+        def on_close():
+            if state["is_downloading"]:
+                cancel_event.set()
+            dlg.destroy()
+
+        btn_close.config(command=on_close)
+        dlg.protocol("WM_DELETE_WINDOW", on_close)
+
+        # Bắt đầu tải ngay lập tức khi mở modal
+        start_download()

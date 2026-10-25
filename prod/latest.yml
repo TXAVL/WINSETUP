@@ -3,12 +3,12 @@ release_date: "2026-10-25"
 repository: "TXAVL/WINSETUP"
 channel: "stable"
 setup_name: "TXAWinSetup_Setup.exe"
-setup_size: 16410661
-setup_sha256: "2EE15C31B91D1E3B5AD4409C138AEEAEDE366C5841147ADBCF61C330AAAF4E7D"
+setup_size: 16423265
+setup_sha256: "EAE48483C37EB9D6E9764D3A74652EC902EA96469E50D09FBDCE4706B8AE2BC7"
 setup_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Setup.exe"
 portable_name: "TXAWinSetup_Portable.exe"
-portable_size: 16536566
-portable_sha256: "B05F8DEE5AEAAD090E6E740CE85398FA61B69F3A1BBA27653ACA4B4E502FFF17"
+portable_size: 16549562
+portable_sha256: "D69CCDCC73C38D05ED61B0A60246B279A6106384E178D3C021B3AD8B17A2E0E2"
 portable_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Portable.exe"
 changelog: |
     • Nâng cấp giao diện trực quan chọn Phân vùng (Partition-first): Người dùng trực tiếp chọn phân vùng muốn cài Windows, bảo toàn 100% dữ liệu các phân vùng khác.
@@ -17,4 +17,3 @@ changelog: |
     • Khắc phục hoàn toàn lỗi kẹt/đơ chuyển tab khi vào tab Tiến trình & Logs rồi bấm quay lại các tab khác.
     • Nâng cấp cửa sổ cập nhật: Hiển thị đầy đủ changelog nội dung mới khi có bản update, giữ nguyên thông báo phiên bản ổn định khi đang ở bản mới nhất.
     • Tối ưu tốc độ tải và kiểm tra phân vùng ổ đĩa (Diskpart & WMI).
-
