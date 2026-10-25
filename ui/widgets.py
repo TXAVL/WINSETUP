@@ -516,7 +516,7 @@ class TXAPartitionCard(tk.Frame):
             highlightthickness=border_thick,
             highlightbackground=border_col,
             padx=14, pady=10,
-            cursor="no-drop" if is_system_part else "hand2"
+            cursor="no" if is_system_part else "hand2"
         )
 
         # Row 1: Badges & status
