@@ -102,8 +102,8 @@ def calc_sha256(filepath):
 setup_size, setup_hash = calc_sha256(PROD_DIR / "TXAWinSetup_Setup.exe")
 port_size, port_hash = calc_sha256(PROD_DIR / "TXAWinSetup_Portable.exe")
 
-latest_yml_content = f"""version: "1.5.0"
-release_date: "2026-10-25"
+latest_yml_content = f"""version: "1.5.1"
+release_date: "2026-10-26"
 repository: "TXAVL/WINSETUP"
 channel: "stable"
 setup_name: "TXAWinSetup_Setup.exe"
@@ -115,15 +115,16 @@ portable_size: {port_size}
 portable_sha256: "{port_hash}"
 portable_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Portable.exe"
 changelog: |
+    • Tối ưu hóa toàn diện cho môi trường cứu hộ Windows PE (WinPE / WinRE / RAMDisk X:\\):
+      - Tự động nhận diện WinPE và ẩn hoàn toàn toàn bộ chức năng kiểm tra cập nhật (nút kiểm tra trên header, luồng check ngầm khi mở app, mục cập nhật trong Cài đặt).
+      - Tinh gọn Tab Driver trên WinPE: Ẩn tính năng trích xuất driver và chỉ giữ lại chế độ nạp trực tiếp gói Driver offline vào phân vùng Windows mới.
+      - Chuẩn hóa nhận diện phân vùng trên WinPE: Ổ C: được xử lý cài đặt trực tiếp, loại bỏ nhãn cảnh báo reboot không cần thiết.
+      - Hỗ trợ lệnh wpeutil reboot để khởi động lại máy tức thì sau khi bung cài đặt xong từ WinPE.
+      - Hỗ trợ ImDisk fallback khi mount file ISO trên các bản WinPE rút gọn không có PowerShell.
+    • Nâng cấp tốc độ tải bản cập nhật: Tăng kích thước bộ đệm truyền dữ liệu lên 256 KB, giúp quá trình tải nhanh hơn gấp nhiều lần.
     • Khắc phục triệt để lỗi nhận diện nhầm phân vùng boot EFI (0.2 GB) thành phân vùng Windows đang chạy: Bổ sung bộ lọc dung lượng và phân loại chuẩn xác (EFI Boot, MSR, Recovery), tự động chọn đúng phân vùng Windows OS (ổ C:) và ngăn chặn tuyệt đối việc cài đặt nhầm vào phân vùng hệ thống nhỏ.
     • Đột phá toàn diện giao diện người dùng (Cyber Obsidian UI 2.0): Nâng cấp bảng màu Obsidian & Sunset Orange độ tương phản cao, phong cách hiện đại chống mỏi mắt.
-    • Thiết kế thanh điều hướng Tab dạng Segmented Pill: Hiệu ứng chuyển động mượt mà, phân tách rõ ràng từng giai đoạn cấu hình.
     • Thanh hiển thị dung lượng phân vùng trực quan (Mini Capacity Bar): Trực tiếp xem dung lượng đã dùng, còn trống và định dạng ổ đĩa tương tự Windows Explorer.
-    • Nâng cấp cửa sổ tải cập nhật trực tiếp trong ứng dụng: Hỗ trợ thanh tiến trình thời gian thực, tự động tiếp tục tải khi bị ngắt quãng (Resumable Download) và tự động khởi chạy bộ cài đặt sau khi tải xong.
-    • Tối ưu hóa toàn bộ các nút bấm, ô nhập liệu và card thành phần với hiệu ứng rê chuột phản hồi tức thì.
-    • Nâng cấp giao diện trực quan chọn Phân vùng (Partition-first): Người dùng trực tiếp chọn phân vùng muốn cài Windows, bảo toàn 100% dữ liệu các phân vùng khác.
-    • Hỗ trợ hộp chọn Combobox thả xuống hiển thị chi tiết mọi phiên bản Windows trong file ISO/WIM/ESD.
-    • Đảm bảo tương thích tuyệt đối với Windows 11 Canary / Insider Preview 29695.1001 (tự động tạo tài khoản Local Admin và bypass OOBE).
 """
 for yml_path in [BASE_DIR / "latest.yml", PROD_DIR / "latest.yml"]:
     with open(yml_path, "w", encoding="utf-8") as f:

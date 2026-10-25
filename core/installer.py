@@ -437,9 +437,11 @@ def run_full_install(
     state.config["wim_path"] = wim_path
     state.config["image_index"] = image_index
     state.config["disk_index"] = disk.index
-    state.config["is_system_disk"] = disk.is_system_disk
+    from .disk import is_winpe
+    running_in_pe = is_winpe()
+    state.config["is_system_disk"] = disk.is_system_disk and not running_in_pe
 
-    if disk.is_system_disk:
+    if disk.is_system_disk and not running_in_pe:
         log_cb(progress, "⚠️ Phát hiện cài đặt lên ổ đĩa hệ thống đang chạy (chứa Windows hiện tại)...", 10.00)
         log_cb(progress, "Do Windows đang chạy trực tiếp trên ổ này, không thể format C: ngay trong phiên hiện tại.", 20.00)
         log_cb(progress, "Đang thiết lập môi trường riêng cho tool (TXA Boot Environment / RAMDisk)...", 35.00)

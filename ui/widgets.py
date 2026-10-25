@@ -419,7 +419,8 @@ class TXADiskCard(tk.Frame):
         tk.Label(hdr, text=f"  Disk {d.index}",
                  bg=C["bg_card"], fg=C["text_secondary"],
                  font=F["small"]).pack(side="left")
-        if d.is_system_disk:
+        from core.disk import is_winpe
+        if d.is_system_disk and not is_winpe():
             tk.Label(hdr, text=" ⚠️ ĐANG CHẠY WINDOWS (CẦN REBOOT) ",
                      bg=C["warning"], fg=C["bg_dark"],
                      font=F["small"], padx=4).pack(side="right")
@@ -499,7 +500,8 @@ class TXAPartitionCard(tk.Frame):
         d = self.disk
 
         # Xác định vai trò phân vùng
-        is_win_os = (p.is_system or p.letter == "C") and p.size_gb >= 15.0
+        from core.disk import is_winpe
+        is_win_os = (not is_winpe()) and (p.is_system or p.letter == "C") and p.size_gb >= 15.0
         is_system_part = p.type in ("EFI", "System", "MSR", "Reserved", "Recovery") or p.size_gb < 15.0
 
         # Row 1: Badges & status

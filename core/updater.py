@@ -7,7 +7,7 @@ import re
 import threading
 from typing import Dict, Any, Optional, Tuple
 
-APP_VERSION = "1.5.0"
+APP_VERSION = "1.5.1"
 REPO_OWNER = "TXAVL"
 REPO_NAME = "WINSETUP"
 
@@ -85,6 +85,18 @@ def check_for_updates(timeout_sec: int = 6) -> Dict[str, Any]:
     Kiểm tra phiên bản mới nhất từ GitHub Release.
     Trả về dict chứa thông tin phiên bản, trạng thái và đường dẫn tải về.
     """
+    try:
+        from core.disk import is_winpe
+        if is_winpe():
+            return {
+                "success": False,
+                "error": "Môi trường WinPE (Đã tắt cập nhật)",
+                "has_update": False,
+                "is_winpe": True,
+            }
+    except Exception:
+        pass
+
     headers = {
         "User-Agent": f"TXAWinSetup/{APP_VERSION} (Windows; x64) GitHubReleaseClient",
         "Accept": "text/plain, text/yaml, application/x-yaml, */*"
@@ -335,7 +347,7 @@ def download_file_resumable(
                 except Exception:
                     pass
 
-        chunk_size = 64 * 1024
+        chunk_size = 256 * 1024
         last_time = time.time()
         last_bytes = downloaded
         speed = 0.0
@@ -414,7 +426,13 @@ def _get_settings_file():
     return p
 
 def is_auto_check_enabled() -> bool:
-    """Kiểm tra xem chế độ tự động kiểm tra cập nhật có bật không (mặc định bật)."""
+    """Kiểm tra xem chế độ tự động kiểm tra cập nhật có bật không (mặc định bật, tắt trên WinPE)."""
+    try:
+        from core.disk import is_winpe
+        if is_winpe():
+            return False
+    except Exception:
+        pass
     # 1. Thử đọc từ Registry Windows
     try:
         import winreg

@@ -37,9 +37,21 @@ def mount_iso(iso_path: str) -> Optional[str]:
         f'try {{ $m = Get-DiskImage -ImagePath \'{iso_path}\'; if (-not $m.Attached) {{ $m = Mount-DiskImage -ImagePath \'{iso_path}\' -PassThru }}; ($m | Get-Volume).DriveLetter }} catch {{ }}"'
     )
     letter = out.strip().split()[-1] if out.strip() else ""
-    if len(letter) == 1:
+    if len(letter) == 1 and letter.isalpha():
         _MOUNTED_ISOS.add(str(Path(iso_path).resolve()))
-        return letter
+        return letter.upper()
+
+    # Fallback cho WinPE nếu có ImDisk
+    try:
+        r = subprocess.run(f'imdisk -a -f "{iso_path}" -m #:', capture_output=True, text=True, shell=True)
+        m = re.search(r"([A-Za-z]):", r.stdout + r.stderr)
+        if m:
+            drv = m.group(1).upper()
+            _MOUNTED_ISOS.add(str(Path(iso_path).resolve()))
+            return drv
+    except Exception:
+        pass
+
     return None
 
 def unmount_iso(iso_path: str):
@@ -47,6 +59,10 @@ def unmount_iso(iso_path: str):
     clean_path = str(Path(iso_path).resolve())
     _MOUNTED_ISOS.discard(clean_path)
     _run(f'powershell -NoProfile -Command "Dismount-DiskImage -ImagePath \'{iso_path}\' -ErrorAction SilentlyContinue"')
+    try:
+        subprocess.run(f'imdisk -D -m "{iso_path}"', capture_output=True, shell=True)
+    except Exception:
+        pass
 
 def unmount_all_iso():
     """Tự động unmount toàn bộ các ổ đĩa ảo ISO đã mount trước khi thoát ứng dụng."""

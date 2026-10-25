@@ -149,16 +149,19 @@ class TXAWinSetup(tk.Tk):
         hdr.pack_propagate(False)
 
         # ── CÁC PHẦN TỬ BÊN PHẢI (PACK TRƯỚC ĐỂ LUÔN NEO GÓC PHẢI, KHÔNG BAO GIỜ BỊ ĐÈ) ──
-        # Nút kiểm tra cập nhật từ GitHub Release
-        self._btn_check_update = tk.Button(
-            hdr, text=" ✨ Kiểm tra cập nhật ",
-            bg="#2A1B0E", fg=COLORS["accent"],
-            activebackground=COLORS["accent"], activeforeground="#FFFFFF",
-            font=FONTS["subhead"], relief="flat", padx=12, pady=5, cursor="hand2",
-            highlightthickness=1, highlightbackground=COLORS["accent"],
-            command=self._on_check_update_click
-        )
-        self._btn_check_update.pack(side="right", padx=(8, 16), pady=12)
+        # Nút kiểm tra cập nhật từ GitHub Release (Ẩn hoàn toàn khi chạy trên WinPE)
+        if not self.is_winpe:
+            self._btn_check_update = tk.Button(
+                hdr, text=" ✨ Kiểm tra cập nhật ",
+                bg="#2A1B0E", fg=COLORS["accent"],
+                activebackground=COLORS["accent"], activeforeground="#FFFFFF",
+                font=FONTS["subhead"], relief="flat", padx=12, pady=5, cursor="hand2",
+                highlightthickness=1, highlightbackground=COLORS["accent"],
+                command=self._on_check_update_click
+            )
+            self._btn_check_update.pack(side="right", padx=(8, 16), pady=12)
+        else:
+            self._btn_check_update = None
 
         # Quick summary on header right
         iso_chip = tk.Frame(hdr, bg=COLORS["bg_card"], padx=10, pady=4,
@@ -196,15 +199,20 @@ class TXAWinSetup(tk.Tk):
                                highlightthickness=1, highlightbackground=COLORS["border_card"])
         status_chip.pack(side="left", pady=12)
 
-        self._status_dot = tk.Label(status_chip, text="●", bg=COLORS["bg_card"],
-                                    fg=COLORS["success"], font=FONTS["body"])
-        self._status_dot.pack(side="left")
-
-        status_txt = "WinPE (X:\\)" if self.is_winpe else "Sẵn sàng cài đặt"
-        self._status_lbl = tk.Label(status_chip, text=status_txt, bg=COLORS["bg_card"],
-                                    fg=COLORS["success"] if self.is_winpe else COLORS["text_secondary"],
-                                    font=FONTS["small"])
-        self._status_lbl.pack(side="left", padx=6)
+        if self.is_winpe:
+            self._status_dot = tk.Label(status_chip, text="●", bg=COLORS["bg_card"],
+                                        fg="#38BDF8", font=FONTS["body"])
+            self._status_dot.pack(side="left")
+            self._status_lbl = tk.Label(status_chip, text="🛡️ Môi trường WinPE (X:\\)", bg=COLORS["bg_card"],
+                                        fg="#38BDF8", font=FONTS["subhead"])
+            self._status_lbl.pack(side="left", padx=6)
+        else:
+            self._status_dot = tk.Label(status_chip, text="●", bg=COLORS["bg_card"],
+                                        fg=COLORS["success"], font=FONTS["body"])
+            self._status_dot.pack(side="left")
+            self._status_lbl = tk.Label(status_chip, text="Sẵn sàng cài đặt", bg=COLORS["bg_card"],
+                                        fg=COLORS["text_secondary"], font=FONTS["small"])
+            self._status_lbl.pack(side="left", padx=6)
 
         # Divider line
         tk.Frame(self, bg=COLORS["border"], height=1).pack(fill="x")
@@ -1070,36 +1078,37 @@ class TXAWinSetup(tk.Tk):
             tk.Label(r_key, text=f"✓ Đã phát hiện BIOS OEM ({self._bios_edition})",
                      bg="#064e3b", fg="#34d399", font=FONTS["small"], padx=6, pady=2).pack(side="left", padx=6)
 
-        # ── Card 4: Cập nhật Ứng dụng (Software Update) ──
-        card_update = TXACard(c)
-        card_update.pack(fill="x", pady=6)
+        # ── Card 4: Cập nhật Ứng dụng (Software Update) ── (Ẩn hoàn toàn khi chạy trên WinPE)
+        if not self.is_winpe:
+            card_update = TXACard(c)
+            card_update.pack(fill="x", pady=6)
 
-        hdr_up = tk.Frame(card_update, bg=COLORS["bg_card"])
-        hdr_up.pack(fill="x", pady=(0, 6))
-        TXALabel(hdr_up, "4. Cập nhật Phần mềm TXA WinSetup",
-                 style="heading", bg=COLORS["bg_card"]).pack(side="left")
-        from core.updater import APP_VERSION, is_auto_check_enabled, set_auto_check_enabled
-        tk.Label(hdr_up, text=f" PHIÊN BẢN v{APP_VERSION} ", bg="#374151", fg="#F97316",
-                 font=("Segoe UI", 8, "bold"), padx=6, pady=1).pack(side="left", padx=8)
+            hdr_up = tk.Frame(card_update, bg=COLORS["bg_card"])
+            hdr_up.pack(fill="x", pady=(0, 6))
+            TXALabel(hdr_up, "4. Cập nhật Phần mềm TXA WinSetup",
+                     style="heading", bg=COLORS["bg_card"]).pack(side="left")
+            from core.updater import APP_VERSION, is_auto_check_enabled, set_auto_check_enabled
+            tk.Label(hdr_up, text=f" PHIÊN BẢN v{APP_VERSION} ", bg="#374151", fg="#F97316",
+                     font=("Segoe UI", 8, "bold"), padx=6, pady=1).pack(side="left", padx=8)
 
-        r_up = tk.Frame(card_update, bg=COLORS["bg_card"])
-        r_up.pack(fill="x", pady=4)
+            r_up = tk.Frame(card_update, bg=COLORS["bg_card"])
+            r_up.pack(fill="x", pady=4)
 
-        self._var_auto_update = tk.BooleanVar(value=is_auto_check_enabled())
-        def _on_toggle_auto_update():
-            set_auto_check_enabled(self._var_auto_update.get())
+            self._var_auto_update = tk.BooleanVar(value=is_auto_check_enabled())
+            def _on_toggle_auto_update():
+                set_auto_check_enabled(self._var_auto_update.get())
 
-        tk.Checkbutton(
-            r_up, text="  Tự động kiểm tra bản cập nhật mới từ GitHub khi mở phần mềm",
-            variable=self._var_auto_update, command=_on_toggle_auto_update,
-            **cb_style
-        ).pack(side="left")
+            tk.Checkbutton(
+                r_up, text="  Tự động kiểm tra bản cập nhật mới từ GitHub khi mở phần mềm",
+                variable=self._var_auto_update, command=_on_toggle_auto_update,
+                **cb_style
+            ).pack(side="left")
 
-        TXAButton(
-            r_up, " ✨ Kiểm tra cập nhật ngay",
-            command=self._on_check_update_click,
-            style="accent", width=190, height=30
-        ).pack(side="right", padx=6)
+            TXAButton(
+                r_up, " ✨ Kiểm tra cập nhật ngay",
+                command=self._on_check_update_click,
+                style="accent", width=190, height=30
+            ).pack(side="right", padx=6)
 
     def _load_bios_key(self):
         def _worker():
@@ -1127,36 +1136,48 @@ class TXAWinSetup(tk.Tk):
         if not self._driver_backup_path:
             self._driver_backup_path = get_backup_default_path()
 
-        # ── Card 1: Sao lưu Driver từ máy hiện tại ──
+        # ── Card 1: Sao lưu / Nạp Driver ──
         card_bk = TXACard(c)
         card_bk.pack(fill="x", pady=(0, 10))
 
-        h1 = tk.Frame(card_bk, bg=COLORS["bg_card"])
-        h1.pack(fill="x", pady=(0, 4))
-        TXALabel(h1, "1. Sao lưu Driver từ Windows hiện tại (Export)", style="heading", bg=COLORS["bg_card"]).pack(side="left")
-        tk.Label(h1, text=" TỰ ĐỘNG TRÍCH XUẤT ", bg="#0284c7", fg="#ffffff",
-                 font=("Segoe UI", 8, "bold"), padx=6, pady=1).pack(side="left", padx=8)
+        if not self.is_winpe:
+            h1 = tk.Frame(card_bk, bg=COLORS["bg_card"])
+            h1.pack(fill="x", pady=(0, 4))
+            TXALabel(h1, "1. Sao lưu Driver từ Windows hiện tại (Export)", style="heading", bg=COLORS["bg_card"]).pack(side="left")
+            tk.Label(h1, text=" TỰ ĐỘNG TRÍCH XUẤT ", bg="#0284c7", fg="#ffffff",
+                     font=("Segoe UI", 8, "bold"), padx=6, pady=1).pack(side="left", padx=8)
 
-        TXALabel(card_bk, "Trích xuất toàn bộ driver đang hoạt động (Wifi, LAN, Audio, GPU, Touchpad...) lưu vào ổ đĩa an toàn.",
-                 style="secondary", bg=COLORS["bg_card"]).pack(anchor="w", pady=(0, 8))
+            TXALabel(card_bk, "Trích xuất toàn bộ driver đang hoạt động (Wifi, LAN, Audio, GPU, Touchpad...) lưu vào ổ đĩa an toàn.",
+                     style="secondary", bg=COLORS["bg_card"]).pack(anchor="w", pady=(0, 8))
 
-        r1 = tk.Frame(card_bk, bg=COLORS["bg_card"])
-        r1.pack(fill="x", pady=4)
-        TXALabel(r1, "Thư mục lưu Driver: ", style="body", bg=COLORS["bg_card"]).pack(side="left")
-        self._driver_path_e = TXAEntry(r1, width=38)
-        self._driver_path_e.insert(0, self._driver_backup_path)
-        self._driver_path_e.pack(side="left", padx=8)
+            r1 = tk.Frame(card_bk, bg=COLORS["bg_card"])
+            r1.pack(fill="x", pady=4)
+            TXALabel(r1, "Thư mục lưu Driver: ", style="body", bg=COLORS["bg_card"]).pack(side="left")
+            self._driver_path_e = TXAEntry(r1, width=38)
+            self._driver_path_e.insert(0, self._driver_backup_path)
+            self._driver_path_e.pack(side="left", padx=8)
 
-        TXAButton(r1, "Browse...", self._browse_driver_path,
-                  style="ghost", width=90, height=30).pack(side="left")
+            TXAButton(r1, "Browse...", self._browse_driver_path,
+                      style="ghost", width=90, height=30).pack(side="left")
 
-        self._driver_status_lbl = TXALabel(card_bk, "", style="secondary", bg=COLORS["bg_card"])
-        self._driver_status_lbl.pack(anchor="w", pady=2)
+            self._driver_status_lbl = TXALabel(card_bk, "", style="secondary", bg=COLORS["bg_card"])
+            self._driver_status_lbl.pack(anchor="w", pady=2)
 
-        b_row = tk.Frame(card_bk, bg=COLORS["bg_card"])
-        b_row.pack(anchor="w", pady=(6, 4))
-        TXAButton(b_row, "▶ Bắt đầu sao lưu ngay", self._do_backup_driver,
-                  style="primary", width=190, height=36).pack(side="left")
+            b_row = tk.Frame(card_bk, bg=COLORS["bg_card"])
+            b_row.pack(anchor="w", pady=(6, 4))
+            TXAButton(b_row, "▶ Bắt đầu sao lưu ngay", self._do_backup_driver,
+                      style="primary", width=190, height=36).pack(side="left")
+        else:
+            h1 = tk.Frame(card_bk, bg=COLORS["bg_card"])
+            h1.pack(fill="x", pady=(0, 4))
+            TXALabel(h1, "1. Nạp Driver Offline trong môi trường WinPE", style="heading", bg=COLORS["bg_card"]).pack(side="left")
+            tk.Label(h1, text=" CHẾ ĐỘ WINPE ", bg="#0284c7", fg="#ffffff",
+                     font=("Segoe UI", 8, "bold"), padx=6, pady=1).pack(side="left", padx=8)
+            TXALabel(card_bk, "Đang chạy trên WinPE (RAMDisk): Tính năng sao lưu driver trực tuyến đã được ẩn vì Windows chính không chạy.\nHãy sử dụng mục số 2 bên dưới để nạp gói Driver có sẵn từ USB/ổ cứng vào Windows mới.",
+                     style="secondary", bg=COLORS["bg_card"]).pack(anchor="w", pady=(0, 4))
+            self._driver_path_e = TXAEntry(card_bk, width=38)
+            self._driver_path_e.insert(0, self._driver_backup_path)
+            self._driver_status_lbl = TXALabel(card_bk, "", style="secondary", bg=COLORS["bg_card"])
 
         # ── Card 2: Khôi phục Driver vào hệ điều hành ──
         card_rs = TXACard(c)
@@ -1231,21 +1252,22 @@ class TXAWinSetup(tk.Tk):
                  "   • Máy tính khởi động lên lần đầu là có sẵn Wifi, Touchpad, âm thanh không lo thiếu mạng.",
                  style="muted", bg=COLORS["bg_input"]).pack(anchor="w", padx=16, pady=(0, 6))
 
-        # Tùy chọn B: Khôi phục ngay vào máy hiện tại
-        box_manual = tk.Frame(card_rs, bg=COLORS["bg_card"])
-        box_manual.pack(fill="x", pady=(10, 4))
+        # Tùy chọn B: Khôi phục ngay vào máy hiện tại (Chỉ hiện khi chạy trên Windows chính)
+        if not self.is_winpe:
+            box_manual = tk.Frame(card_rs, bg=COLORS["bg_card"])
+            box_manual.pack(fill="x", pady=(10, 4))
 
-        TXALabel(box_manual, "Hoặc khôi phục / cài đặt ngay lập tức vào máy tính hiện tại:",
-                 style="body", bg=COLORS["bg_card"]).pack(anchor="w", pady=(0, 4))
+            TXALabel(box_manual, "Hoặc khôi phục / cài đặt ngay lập tức vào máy tính hiện tại:",
+                     style="body", bg=COLORS["bg_card"]).pack(anchor="w", pady=(0, 4))
 
-        r2 = tk.Frame(box_manual, bg=COLORS["bg_card"])
-        r2.pack(fill="x", pady=4)
+            r2 = tk.Frame(box_manual, bg=COLORS["bg_card"])
+            r2.pack(fill="x", pady=4)
 
-        TXAButton(r2, "⚡ Khôi phục Driver ngay vào máy này", self._do_restore_driver_now,
-                  style="ghost", width=270, height=36).pack(side="left")
+            TXAButton(r2, "⚡ Khôi phục Driver ngay vào máy này", self._do_restore_driver_now,
+                      style="ghost", width=270, height=36).pack(side="left")
 
-        self._restore_status_lbl = TXALabel(card_rs, "", style="secondary", bg=COLORS["bg_card"])
-        self._restore_status_lbl.pack(anchor="w", pady=(4, 0))
+            self._restore_status_lbl = TXALabel(card_rs, "", style="secondary", bg=COLORS["bg_card"])
+            self._restore_status_lbl.pack(anchor="w", pady=(4, 0))
 
     def _browse_driver_path(self):
         path = filedialog.askdirectory(title="Chọn thư mục lưu Driver")
@@ -1731,7 +1753,10 @@ class TXAWinSetup(tk.Tk):
             self.after(1000, self._tick_countdown)
 
     def _do_reboot(self):
-        os.system("shutdown /r /t 5 /c \"TXA WinSetup: Khởi động lại để hoàn tất cài đặt\"")
+        if self.is_winpe:
+            os.system("wpeutil reboot || shutdown /r /t 2")
+        else:
+            os.system("shutdown /r /t 5 /c \"TXA WinSetup: Khởi động lại để hoàn tất cài đặt\"")
         self.destroy()
 
     def _go_phase3(self):
@@ -1827,7 +1852,9 @@ class TXAWinSetup(tk.Tk):
         self.destroy()
 
     def _auto_check_update_on_startup(self):
-        """Tự động kiểm tra bản cập nhật trên luồng ngầm khi khởi động ứng dụng."""
+        """Tự động kiểm tra bản cập nhật trên luồng ngầm khi khởi động ứng dụng (tắt hoàn toàn trên WinPE)."""
+        if self.is_winpe:
+            return
         try:
             from core.updater import is_auto_check_enabled, check_update_async
             if not is_auto_check_enabled():
@@ -1840,7 +1867,7 @@ class TXAWinSetup(tk.Tk):
 
     def _handle_startup_update_result(self, res):
         """Xử lý kết quả kiểm tra cập nhật tự động khi khởi động."""
-        if res.get("has_update"):
+        if res.get("has_update") and getattr(self, '_btn_check_update', None):
             ver = res.get("latest_version")
             self._btn_check_update.config(
                 text=f"⚡ Có bản v{ver} mới!",
