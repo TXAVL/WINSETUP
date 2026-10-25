@@ -3,12 +3,12 @@ release_date: "2026-10-26"
 repository: "TXAVL/WINSETUP"
 channel: "stable"
 setup_name: "TXAWinSetup_Setup.exe"
-setup_size: 16458703
-setup_sha256: "54F882DCAAA0AC82366281E417417602215EC1D421806C1566F6B31B8BCC6B44"
+setup_size: 16460570
+setup_sha256: "482A8327A940B0B50A3C5E0B7050EDCB38223166C33DC73110A6A02629D3E38B"
 setup_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Setup.exe"
 portable_name: "TXAWinSetup_Portable.exe"
-portable_size: 16584321
-portable_sha256: "8422100B87E330D839A41954C1A709B1034A6230ABA627D53E0788CE87202440"
+portable_size: 16586496
+portable_sha256: "9C31CFC1F9428A78F3CE057DE8A28F18BB0A1D5425A9E5AE77FC6BDBD2B7F285"
 portable_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Portable.exe"
 changelog: |
     • Tối ưu hóa toàn diện cho môi trường cứu hộ Windows PE (WinPE / WinRE / RAMDisk X:\):

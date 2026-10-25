@@ -651,10 +651,7 @@ class TXAWinSetup(tk.Tk):
                 self._selected_partition is not None
                 and self._selected_disk is not None
                 and self._selected_disk.index == disk.index
-                and (
-                    (self._selected_partition.letter and self._selected_partition.letter == p.letter)
-                    or (self._selected_partition.index == p.index)
-                )
+                and self._selected_partition.index == p.index
             )
             card = TXAPartitionCard(
                 parent, disk, p,
@@ -662,14 +659,14 @@ class TXAWinSetup(tk.Tk):
                 selected=is_sel
             )
             card.pack(fill="x", pady=3)
-            key = f"{disk.index}_{p.index}_{p.letter}"
+            key = f"{disk.index}_{p.index}"
             self._partition_cards[key] = card
 
     def _select_partition(self, disk, partition):
         # Kiểm tra nếu người dùng click vào phân vùng EFI / MSR / Recovery hoặc quá nhỏ
         if partition.size_gb < 15.0 or partition.type in ("EFI", "System", "MSR", "Reserved", "Recovery"):
-            p_name = f"ổ {partition.letter}:\\" if partition.letter else f"Phân vùng {partition.index}"
-            self._set_status(f"⚠️ {p_name} ({partition.size_gb} GB, loại {partition.type}) là phân vùng hệ thống, không thể chọn để cài đặt Windows!", COLORS["warning"])
+            p_name = f"ổ {partition.letter}:\\" if partition.letter else f"Phân vùng {partition.index} ({partition.type})"
+            self._set_status(f"ℹ️ {p_name} là phân vùng boot hệ thống được tự động bảo toàn, không thể cài đặt vào đây.", COLORS["warning"])
             return
 
         self._selected_disk = disk
@@ -680,7 +677,7 @@ class TXAWinSetup(tk.Tk):
         for k, card in self._partition_cards.items():
             is_this = (
                 card.disk.index == disk.index and 
-                (card.partition.letter == partition.letter if partition.letter else card.partition.index == partition.index)
+                card.partition.index == partition.index
             )
             card.set_selected(is_this)
 

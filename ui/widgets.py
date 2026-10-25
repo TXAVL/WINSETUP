@@ -479,74 +479,90 @@ class TXAPartitionCard(tk.Frame):
             self._bind_events_recursive(child)
 
     def _on_enter(self, _):
-        if not self.selected:
+        if not self.selected and not getattr(self, '_is_protected', False):
             self.configure(bg=COLORS["bg_hover"], highlightbackground=COLORS["border_card"])
 
     def _on_leave(self, _):
-        if not self.selected:
+        if not self.selected and not getattr(self, '_is_protected', False):
             self.configure(bg=COLORS["bg_card"], highlightbackground=COLORS["border"])
 
     def _build(self):
-        bg = COLORS["bg_card_selected"] if self.selected else COLORS["bg_card"]
-        border_col = COLORS["accent"] if self.selected else COLORS["border"]
-        self.configure(
-            bg=bg,
-            highlightthickness=2 if self.selected else 1,
-            highlightbackground=border_col,
-            padx=14, pady=10
-        )
         from .theme import COLORS as C, FONTS as F
         p = self.partition
         d = self.disk
 
         # Xác định vai trò phân vùng
         from core.disk import is_winpe
-        is_win_os = (not is_winpe()) and (p.is_system or p.letter == "C") and p.size_gb >= 15.0
+        in_pe = is_winpe()
+        is_win_os = (not in_pe) and (p.is_system or p.letter == "C") and p.size_gb >= 15.0
         is_system_part = p.type in ("EFI", "System", "MSR", "Reserved", "Recovery") or p.size_gb < 15.0
+        self._is_protected = is_system_part
+
+        if self.selected:
+            bg = COLORS["bg_card_selected"]
+            border_col = COLORS["accent"]
+            border_thick = 2
+        elif is_system_part:
+            bg = "#0F141D"
+            border_col = "#1E2636"
+            border_thick = 1
+        else:
+            bg = COLORS["bg_card"]
+            border_col = COLORS["border"]
+            border_thick = 1
+
+        self.configure(
+            bg=bg,
+            highlightthickness=border_thick,
+            highlightbackground=border_col,
+            padx=14, pady=10,
+            cursor="no-drop" if is_system_part else "hand2"
+        )
 
         # Row 1: Badges & status
         hdr = tk.Frame(self, bg=bg)
         hdr.pack(fill="x")
 
         # Radio checkmark icon
-        if is_system_part and not is_win_os:
-            radio_icon = "⊘"
-            radio_color = C["text_muted"]
+        if is_system_part:
+            radio_icon = "🔒"
+            radio_color = "#64748B"
         else:
             radio_icon = "●" if self.selected else "○"
             radio_color = C["accent"] if self.selected else C["text_muted"]
-        tk.Label(hdr, text=radio_icon, bg=bg, fg=radio_color, font=("Segoe UI", 12, "bold")).pack(side="left", padx=(0, 8))
+        tk.Label(hdr, text=radio_icon, bg=bg, fg=radio_color, font=("Segoe UI", 11)).pack(side="left", padx=(0, 8))
 
         # Badge phân vùng
         p_badge = f"  Ổ {p.letter}:\\  " if p.letter else f"  Phân vùng {p.index}  "
         if self.selected:
             badge_bg = C["accent"]
             badge_fg = "#FFFFFF"
-        elif is_win_os:
-            badge_bg = C["warning"]
-            badge_fg = "#000000"
         elif is_system_part:
-            badge_bg = "#1E293B"
-            badge_fg = "#94A3B8"
+            badge_bg = "#182232"
+            badge_fg = "#64748B"
+        elif is_win_os:
+            badge_bg = "#231B10"
+            badge_fg = "#F59E0B"
         else:
-            badge_bg = C["info"]
-            badge_fg = C["bg_dark"]
+            badge_bg = "#16202E"
+            badge_fg = C["info"]
         tk.Label(hdr, text=p_badge, bg=badge_bg, fg=badge_fg, font=F["subhead"], padx=6, pady=2).pack(side="left")
 
         # Label tên phân vùng & dung lượng
         label_text = f" [{p.label}]" if p.label else ""
         fs_text = f" • {p.fs}" if p.fs else ""
-        tk.Label(hdr, text=f"  {p.size_gb} GB{fs_text}{label_text}", bg=bg, fg=C["text_primary"], font=F["heading"]).pack(side="left")
+        label_fg = C["text_primary"] if not is_system_part else "#64748B"
+        tk.Label(hdr, text=f"  {p.size_gb} GB{fs_text}{label_text}", bg=bg, fg=label_fg, font=F["heading"]).pack(side="left")
 
         # Badges trạng thái bên phải
-        if is_win_os:
-            tk.Label(hdr, text=" ⚠️ WINDOWS HIỆN TẠI (TỰ REBOOT) ", bg=C["warning"], fg="#000000", font=F["badge"], padx=5, pady=2).pack(side="right")
-        elif p.type in ("EFI", "System") or (p.size_gb < 2.0 and p.fs == "FAT32"):
-            tk.Label(hdr, text=" 🛡 EFI BOOT ", bg="#1E293B", fg="#94A3B8", font=F["badge"], padx=5, pady=2).pack(side="right")
-        elif p.type in ("MSR", "Reserved"):
-            tk.Label(hdr, text=" ⚙ MSR DỰ TRỮ ", bg="#1E293B", fg="#94A3B8", font=F["badge"], padx=5, pady=2).pack(side="right")
-        elif p.type == "Recovery" or "Recovery" in (p.label or ""):
-            tk.Label(hdr, text=" 🔄 RECOVERY ", bg="#1E293B", fg="#94A3B8", font=F["badge"], padx=5, pady=2).pack(side="right")
+        if self.selected:
+            sel_text = " ⚡ ĐÃ CHỌN CÀI ĐẶT (WINDOWS HIỆN TẠI) " if is_win_os else " ✓ ĐÃ CHỌN ĐỂ CÀI ĐẶT "
+            tk.Label(hdr, text=sel_text, bg=C["accent"], fg="#FFFFFF", font=F["badge"], padx=6, pady=2).pack(side="right")
+        elif is_win_os:
+            tk.Label(hdr, text=" ⚠️ Windows hiện tại ", bg="#231B10", fg="#F59E0B", font=F["badge"], padx=6, pady=2).pack(side="right")
+        elif is_system_part:
+            sys_desc = " 🛡 EFI BOOT " if p.type in ("EFI", "System") else (" ⚙ MSR DỰ TRỮ " if p.type in ("MSR", "Reserved") else " 🔄 RECOVERY ")
+            tk.Label(hdr, text=f"{sys_desc}(BẢO TOÀN) ", bg="#16202E", fg="#64748B", font=F["badge"], padx=5, pady=2).pack(side="right")
         elif p.bitlocker_status == "On":
             tk.Label(hdr, text=" 🔒 BITLOCKER ", bg=C["info"], fg="#FFFFFF", font=F["badge"], padx=5, pady=2).pack(side="right")
 
