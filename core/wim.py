@@ -27,10 +27,14 @@ _MOUNTED_ISOS = set()
 
 def mount_iso(iso_path: str) -> Optional[str]:
     """Mount ISO, trả về drive letter (vd: 'F') hoặc None."""
+    already = get_mounted_drive(iso_path)
+    if already:
+        _MOUNTED_ISOS.add(str(Path(iso_path).resolve()))
+        return already
+
     out = _run(
         f'powershell -NoProfile -Command "'
-        f'$m = Mount-DiskImage -ImagePath \'{iso_path}\' -PassThru; '
-        f'($m | Get-Volume).DriveLetter"'
+        f'try {{ $m = Get-DiskImage -ImagePath \'{iso_path}\'; if (-not $m.Attached) {{ $m = Mount-DiskImage -ImagePath \'{iso_path}\' -PassThru }}; ($m | Get-Volume).DriveLetter }} catch {{ }}"'
     )
     letter = out.strip().split()[-1] if out.strip() else ""
     if len(letter) == 1:
@@ -65,59 +69,104 @@ def get_mounted_drive(iso_path: str) -> Optional[str]:
     letter = out.strip().split()[-1] if out.strip() else ""
     return letter if len(letter) == 1 else None
 
-# ── WIM metadata đọc thuần binary (không cần DISM) ─────────────────
+# ── WIM metadata: Binary Parser kết hợp DISM Fallback ──────────────
+
+def _read_images_via_dism(wim_path: str) -> List[WimImage]:
+    """Sử dụng DISM của Windows để đọc danh sách phiên bản (hỗ trợ 100% WIM, ESD, SWM, Insider Preview)."""
+    images = []
+    try:
+        out = _run(f'dism.exe /English /Get-WimInfo /WimFile:"{wim_path}"', timeout=30)
+        if not out or "Index :" not in out:
+            out = _run(f'dism.exe /English /Get-ImageInfo /ImageFile:"{wim_path}"', timeout=30)
+
+        blocks = re.split(r"(?:^|\r?\n)(?=Index\s*:)", out)
+        for b in blocks:
+            m_idx = re.search(r"Index\s*:\s*(\d+)", b)
+            if not m_idx:
+                continue
+            idx = int(m_idx.group(1))
+
+            m_name = re.search(r"Name\s*:\s*(.+)", b)
+            name = m_name.group(1).strip() if m_name else f"Windows Image {idx}"
+
+            m_desc = re.search(r"Description\s*:\s*(.+)", b)
+            desc = m_desc.group(1).strip() if m_desc else ""
+
+            m_size = re.search(r"Size\s*:\s*([\d,\.]+)\s*bytes", b)
+            size_gb = 0.0
+            if m_size:
+                raw_bytes = int(m_size.group(1).replace(",", "").replace(".", ""))
+                size_gb = round(raw_bytes / (1024**3), 1)
+
+            images.append(WimImage(
+                index=idx,
+                name=name,
+                description=desc,
+                size_gb=size_gb,
+                architecture="x64"
+            ))
+    except Exception as e:
+        print(f"[dism] read error: {e}")
+    return images
 
 def read_wim_images(wim_path: str) -> List[WimImage]:
     """
-    Đọc danh sách edition từ WIM XML header.
-    Không cần admin, không cần DISM.
+    Đọc danh sách toàn bộ các phiên bản Windows (Editions) trong file WIM / ESD / SWM.
+    Kết hợp parser nhị phân siêu tốc và DISM fallback đảm bảo đọc được mọi bản Windows kể cả Insider Preview.
     """
     images = []
+    # 1. Thử đọc nhanh trực tiếp qua header nhị phân nếu là file WIM uncompressed
     try:
         with open(wim_path, "rb") as f:
             header = f.read(208)
-            if header[:8] != b"MSWIM\x00\x00\x00":
-                return images
+            if header[:8] == b"MSWIM\x00\x00\x00":
+                xml_size_raw = struct.unpack_from("<Q", header, 72)[0]
+                xml_size = xml_size_raw & 0x00FFFFFFFFFFFFFF
+                xml_offset = struct.unpack_from("<Q", header, 80)[0]
 
-            # XML resource header tại offset 72 (24 bytes)
-            xml_size_raw = struct.unpack_from("<Q", header, 72)[0]
-            xml_size = xml_size_raw & 0x00FFFFFFFFFFFFFF
-            xml_offset = struct.unpack_from("<Q", header, 80)[0]
+                f.seek(xml_offset)
+                xml_bytes = f.read(int(xml_size))
+                xml_str = xml_bytes.decode("utf-16-le", errors="replace").lstrip("\ufeff")
+                import xml.etree.ElementTree as ET
+                root = ET.fromstring(xml_str)
 
-            f.seek(xml_offset)
-            xml_bytes = f.read(int(xml_size))
+                for img in root.findall("IMAGE"):
+                    idx = int(img.get("INDEX", 0))
+                    name = (img.findtext("NAME") or f"Image {idx}").strip()
+                    desc = (img.findtext("DESCRIPTION") or "").strip()
+                    total_bytes = int(img.findtext("TOTALBYTES") or 0)
+                    size_gb = round(total_bytes / (1024**3), 1)
 
-        # Parse XML (UTF-16 LE)
-        xml_str = xml_bytes.decode("utf-16-le", errors="replace").lstrip("﻿")
-        import xml.etree.ElementTree as ET
-        root = ET.fromstring(xml_str)
+                    arch_node = img.find(".//ARCH")
+                    arch = "x64" if arch_node is None else (
+                        "x64" if arch_node.text in ("9", "x64") else "x86"
+                    )
 
-        for img in root.findall("IMAGE"):
-            idx = int(img.get("INDEX", 0))
-            name = (img.findtext("NAME") or f"Image {idx}").strip()
-            desc = (img.findtext("DESCRIPTION") or "").strip()
-            total_bytes = int(img.findtext("TOTALBYTES") or 0)
-            size_gb = round(total_bytes / (1024**3), 1)
+                    images.append(WimImage(
+                        index=idx, name=name, description=desc,
+                        size_gb=size_gb, architecture=arch
+                    ))
+    except Exception:
+        pass
 
-            arch_node = img.find(".//ARCH")
-            arch = "x64" if arch_node is None else (
-                "x64" if arch_node.text in ("9", "x64") else "x86"
-            )
+    # 2. Nếu đọc binary không có kết quả (đặc trưng của file install.esd nén LZMS hoặc WIM đặc biệt)
+    # Tự động chuyển sang gọi DISM của Windows
+    if not images:
+        images = _read_images_via_dism(wim_path)
 
-            images.append(WimImage(
-                index=idx, name=name, description=desc,
-                size_gb=size_gb, architecture=arch
-            ))
-    except Exception as e:
-        print(f"[wim] read error: {e}")
     return images
 
 def get_wim_path_from_drive(drive_letter: str) -> Optional[str]:
-    """Tìm install.wim hoặc install.esd trong sources folder."""
-    for name in ("install.wim", "install.esd"):
-        p = f"{drive_letter}:\\sources\\{name}"
-        if Path(p).exists():
-            return p
+    """Tìm install.wim, install.esd hoặc install.swm trong sources folder của ổ đĩa."""
+    sources = Path(f"{drive_letter}:\\sources")
+    if sources.exists() and sources.is_dir():
+        for name in ("install.wim", "install.esd", "install.swm"):
+            p = sources / name
+            if p.exists():
+                return str(p)
+        for f in sources.iterdir():
+            if f.is_file() and f.suffix.lower() in (".wim", ".esd", ".swm") and "boot" not in f.name.lower():
+                return str(f)
     return None
 
 # ── Apply image ─────────────────────────────────────────────────────

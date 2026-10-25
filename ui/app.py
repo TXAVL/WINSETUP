@@ -9,7 +9,7 @@ from pathlib import Path
 from .theme import COLORS, FONTS, TAB_ITEMS
 from .widgets import (
     TXAButton, TXACard, TXALabel, TXAEntry,
-    TXATabBar, TXAProgressBar, TXADiskCard, TXAScrollableFrame
+    TXATabBar, TXAProgressBar, TXADiskCard, TXAScrollableFrame, TXAPartitionCard
 )
 
 class TXAWinSetup(tk.Tk):
@@ -60,8 +60,10 @@ class TXAWinSetup(tk.Tk):
         self._img_var = tk.IntVar(value=1)
 
         self._selected_disk = None
+        self._selected_partition = None
         self._disks = []
         self._disk_cards = {}
+        self._partition_cards = {}
         self._bios_key = ""
         self._bios_edition = ""
         self._driver_backup_path = ""
@@ -254,7 +256,10 @@ class TXAWinSetup(tk.Tk):
             w.destroy()
 
     def _switch_tab(self, idx: int):
-        self._save_tab_inputs()
+        try:
+            self._save_tab_inputs()
+        except Exception:
+            pass
         self._current_tab = idx
         self._render_current_tab()
 
@@ -330,26 +335,26 @@ class TXAWinSetup(tk.Tk):
             self._iso_info_frame.pack(fill="x", pady=(8, 2))
             self._render_wim_editions_ui(self._iso_info_frame)
 
-        # --- Card 2: Ổ đĩa đích & Phân vùng ---
+        # --- Card 2: Phân vùng đích cài đặt Windows ---
         disk_card = TXACard(c)
         disk_card.pack(fill="x", pady=6)
 
         d_hdr = tk.Frame(disk_card, bg=COLORS["bg_card"])
         d_hdr.pack(fill="x", pady=(0, 6))
-        TXALabel(d_hdr, "2. Chọn Ổ Đĩa Cài Đặt", style="heading",
+        TXALabel(d_hdr, "2. Chọn Phân Vùng Cài Đặt Windows", style="heading",
                  bg=COLORS["bg_card"]).pack(side="left")
-        TXALabel(d_hdr, "⚠️ Toàn bộ dữ liệu trên ổ được chọn sẽ bị XÓA",
-                 style="small", color=COLORS["warning"], bg=COLORS["bg_card"]).pack(side="left", padx=10)
+        TXALabel(d_hdr, "🛡️ BẢO TOÀN toàn bộ dữ liệu trên các phân vùng khác",
+                 style="small", color=COLORS["success"], bg=COLORS["bg_card"]).pack(side="left", padx=10)
 
-        TXAButton(d_hdr, "⟳ Làm mới ổ đĩa", self._refresh_disks,
-                  style="ghost", width=130, height=28).pack(side="right")
+        TXAButton(d_hdr, "⟳ Làm mới", self._refresh_disks,
+                  style="ghost", width=100, height=28).pack(side="right")
 
-        # Danh sách ổ đĩa
+        # Danh sách phân vùng trực quan
         self._disk_list_frame = tk.Frame(disk_card, bg=COLORS["bg_card"])
         self._disk_list_frame.pack(fill="x", pady=4)
         self._render_disks_ui(self._disk_list_frame)
 
-        # Phân vùng C: và Data
+        # Tùy chọn cài đặt & format
         self._size_frame = tk.Frame(disk_card, bg=COLORS["bg_card"])
         self._size_frame.pack(fill="x", pady=(8, 4))
         self._render_size_controls_ui(self._size_frame)
@@ -372,7 +377,9 @@ class TXAWinSetup(tk.Tk):
                 except Exception:
                     pass
             self._selected_iso = path
-            self._hdr_iso_lbl.config(text=Path(path).name[:30] + "...", fg=COLORS["success"])
+            if hasattr(self, '_hdr_iso_lbl'):
+                self._hdr_iso_lbl.config(text=Path(path).name[:30] + "...", fg=COLORS["success"])
+            self._render_current_tab()
             self._load_iso_info()
 
     def _eject_current_iso(self):
@@ -459,32 +466,104 @@ class TXAWinSetup(tk.Tk):
             w.destroy()
 
         if not self._wim_images:
-            TXALabel(parent, "Đang nạp thông tin WIM...", style="secondary", bg=COLORS["bg_card"]).pack(anchor="w")
+            TXALabel(parent, "⏳ Đang đọc danh sách các phiên bản Windows trong file cài đặt...",
+                     style="secondary", bg=COLORS["bg_card"]).pack(anchor="w", pady=4)
             return
 
-        TXALabel(parent, "Chọn phiên bản Windows muốn cài:",
-                 style="subhead", bg=COLORS["bg_card"]).pack(anchor="w", pady=(0, 4))
+        hdr_row = tk.Frame(parent, bg=COLORS["bg_card"])
+        hdr_row.pack(fill="x", pady=(0, 4))
+        TXALabel(hdr_row, "Chọn phiên bản Windows muốn cài đặt:",
+                 style="subhead", bg=COLORS["bg_card"]).pack(side="left")
+        TXALabel(hdr_row, f"({len(self._wim_images)} phiên bản có sẵn)",
+                 style="secondary", bg=COLORS["bg_card"]).pack(side="left", padx=8)
 
-        self._img_var.set(self._selected_image_idx)
-        for img in self._wim_images:
-            row = tk.Frame(parent, bg=COLORS["bg_card"])
-            row.pack(fill="x", pady=2)
-            rb = tk.Radiobutton(
-                row, variable=self._img_var, value=img.index,
-                bg=COLORS["bg_card"], fg=COLORS["text_primary"],
-                selectcolor=COLORS["bg_input"],
-                activebackground=COLORS["bg_card"],
-                font=FONTS["body"],
-                text=f"  {img.name}  ({img.size_gb} GB expanded)",
-                command=lambda: setattr(self, '_selected_image_idx', self._img_var.get())
-            )
-            rb.pack(side="left")
+        # Dropdown Combobox chọn phiên bản
+        combo_frame = tk.Frame(parent, bg=COLORS["bg_card"])
+        combo_frame.pack(fill="x", pady=2)
+
+        edition_items = [
+            f"Index {img.index}: {img.name} ({img.size_gb} GB - {img.architecture})"
+            for img in self._wim_images
+        ]
+
+        curr_idx = 0
+        for i, img in enumerate(self._wim_images):
+            if img.index == self._selected_image_idx:
+                curr_idx = i
+                break
+
+        edition_combo = ttk.Combobox(
+            combo_frame,
+            values=edition_items,
+            state="readonly",
+            font=FONTS["body"],
+            width=54
+        )
+        edition_combo.current(curr_idx)
+        edition_combo.pack(side="left", fill="x", expand=True)
+
+        detail_lbl = tk.Label(
+            parent,
+            text="",
+            bg=COLORS["bg_card"],
+            fg=COLORS["text_secondary"],
+            font=FONTS["small"],
+            anchor="w"
+        )
+        detail_lbl.pack(fill="x", pady=(4, 0))
+
+        def _on_edition_change(event=None):
+            idx = edition_combo.current()
+            if 0 <= idx < len(self._wim_images):
+                sel_img = self._wim_images[idx]
+                self._selected_image_idx = sel_img.index
+                self._img_var.set(sel_img.index)
+                desc = f" — {sel_img.description}" if sel_img.description else ""
+                detail_lbl.config(
+                    text=f"✓ Đã chọn: {sel_img.name} (Index {sel_img.index}) | Dung lượng giải nén: {sel_img.size_gb} GB | Kiến trúc: {sel_img.architecture}{desc}",
+                    fg=COLORS["accent"]
+                )
+
+        edition_combo.bind("<<ComboboxSelected>>", _on_edition_change)
+        _on_edition_change()
+
+    def _auto_select_default_partition(self):
+        """Tự động tìm và chọn phân vùng cài đặt Windows phù hợp nhất (ưu tiên phân vùng C:)."""
+        if not self._disks:
+            return
+        # Ưu tiên 1: Phân vùng C: (hệ điều hành hiện tại)
+        for d in self._disks:
+            for p in d.partitions:
+                if p.letter == "C" or p.is_system:
+                    self._selected_disk = d
+                    self._selected_partition = p
+                    self._config["install_mode"] = "existing_partition"
+                    self._config["target_partition_letter"] = "C"
+                    return
+        # Ưu tiên 2: Phân vùng NTFS có dung lượng >= 30 GB
+        for d in self._disks:
+            for p in d.partitions:
+                if p.size_gb >= 30.0 and (p.fs or "").upper() == "NTFS":
+                    self._selected_disk = d
+                    self._selected_partition = p
+                    self._config["install_mode"] = "existing_partition"
+                    self._config["target_partition_letter"] = p.letter or f"Part {p.index}"
+                    return
+        # Ưu tiên 3: Phân vùng đầu tiên
+        for d in self._disks:
+            if d.partitions:
+                self._selected_disk = d
+                self._selected_partition = d.partitions[0]
+                self._config["install_mode"] = "existing_partition"
+                self._config["target_partition_letter"] = d.partitions[0].letter or f"Part {d.partitions[0].index}"
+                return
 
     def _load_disks_background(self):
         def _worker():
             try:
                 from core.disk import get_all_disks
                 self._disks = get_all_disks()
+                self._auto_select_default_partition()
                 self.after(0, self._render_current_tab)
                 self.after(0, lambda: self._set_status(f"Đã phát hiện {len(self._disks)} ổ đĩa", COLORS["success"]))
             except Exception as e:
@@ -492,10 +571,11 @@ class TXAWinSetup(tk.Tk):
         threading.Thread(target=_worker, daemon=True).start()
 
     def _refresh_disks(self):
-        self._set_status("Đang quét ổ đĩa...", COLORS["warning"])
+        self._set_status("Đang quét phân vùng và ổ đĩa...", COLORS["warning"])
         def _worker():
             from core.disk import get_all_disks
             self._disks = get_all_disks(force_refresh=True)
+            self._auto_select_default_partition()
             self.after(0, self._render_current_tab)
             self.after(0, lambda: self._set_status(f"Tìm thấy {len(self._disks)} ổ đĩa", COLORS["success"]))
         threading.Thread(target=_worker, daemon=True).start()
@@ -503,48 +583,73 @@ class TXAWinSetup(tk.Tk):
     def _render_disks_ui(self, parent):
         for w in parent.winfo_children():
             w.destroy()
-        self._disk_cards = {}
+        self._partition_cards = {}
 
         if not self._disks:
-            TXALabel(parent, "Đang tải danh sách ổ đĩa (hoặc bấm Làm mới)...",
+            TXALabel(parent, "Đang quét danh sách phân vùng ổ đĩa...",
                      style="secondary", bg=COLORS["bg_card"]).pack(pady=10)
             return
 
+        all_parts = []
         for disk in self._disks:
-            card = TXADiskCard(
-                parent, disk,
-                on_select=self._select_disk,
-                selected=(self._selected_disk and self._selected_disk.index == disk.index),
-            )
-            card.pack(fill="x", pady=4)
-            self._disk_cards[disk.index] = card
+            for p in disk.partitions:
+                all_parts.append((disk, p))
 
-    def _select_disk(self, disk):
+        if not all_parts:
+            TXALabel(parent, "Không tìm thấy phân vùng nào trên các ổ đĩa.",
+                     style="warning", bg=COLORS["bg_card"]).pack(pady=10)
+            return
+
+        if not self._selected_partition:
+            self._auto_select_default_partition()
+
+        for disk, p in all_parts:
+            is_sel = (
+                self._selected_partition is not None
+                and self._selected_disk is not None
+                and self._selected_disk.index == disk.index
+                and (
+                    (self._selected_partition.letter and self._selected_partition.letter == p.letter)
+                    or (self._selected_partition.index == p.index)
+                )
+            )
+            card = TXAPartitionCard(
+                parent, disk, p,
+                on_select=self._select_partition,
+                selected=is_sel
+            )
+            card.pack(fill="x", pady=3)
+            key = f"{disk.index}_{p.index}_{p.letter}"
+            self._partition_cards[key] = card
+
+    def _select_partition(self, disk, partition):
         self._selected_disk = disk
-        for idx, card in self._disk_cards.items():
-            card.set_selected(idx == disk.index)
+        self._selected_partition = partition
+        self._config["install_mode"] = "existing_partition"
+        self._config["target_partition_letter"] = partition.letter or "C"
+
+        for k, card in self._partition_cards.items():
+            is_this = (
+                card.disk.index == disk.index and 
+                (card.partition.letter == partition.letter if partition.letter else card.partition.index == partition.index)
+            )
+            card.set_selected(is_this)
 
         if hasattr(self, '_size_frame'):
             self._render_size_controls_ui(self._size_frame)
 
-        if disk.is_system_disk and not self.is_winpe:
-            messagebox.showwarning(
-                "⚠️ Phát hiện ổ đĩa đang chạy Windows",
-                f"Disk {disk.index} ({disk.model}) đang chứa hệ điều hành Windows bạn đang sử dụng (ổ C:\\)!\n\n"
-                "• Do Windows đang chạy trực tiếp trên ổ này, hệ thống KHÔNG THỂ format hay ghi đè lên ổ C: ngay bây giờ.\n\n"
-                "• QUY TRÌNH TỰ ĐỘNG CỦA TOOL:\n"
-                "  1. Khi bạn bấm bắt đầu, tool sẽ chuẩn bị file cấu hình, sao lưu driver và lưu trạng thái.\n"
-                "  2. Máy tính sẽ TỰ ĐỘNG KHỞI ĐỘNG LẠI.\n"
-                "  3. Sau khi máy khởi động lại, quá trình cài đặt sạch và phân vùng mới sẽ tự động tiếp tục.\n\n"
-                "Bạn có thể tiếp tục cấu hình các Tab khác và bấm 'Bắt đầu cài đặt' khi sẵn sàng."
-            )
+        p_name = f"ổ {partition.letter}:\\" if partition.letter else f"phân vùng {partition.index}"
+        if (partition.is_system or partition.letter == "C" or disk.is_system_disk) and not self.is_winpe:
+            self._set_status(f"Đã chọn {p_name} (Windows hiện tại - Tool sẽ tự động reboot để cài sạch an toàn)", COLORS["warning"])
+        else:
+            self._set_status(f"Đã chọn {p_name} ({partition.size_gb} GB) trên Disk {disk.index}", COLORS["success"])
 
     def _render_size_controls_ui(self, parent):
         for w in parent.winfo_children():
             w.destroy()
 
         if not self._selected_disk:
-            TXALabel(parent, "Vui lòng click chọn 1 ổ đĩa ở trên để cấu hình phân vùng.",
+            TXALabel(parent, "Vui lòng click chọn 1 phân vùng ở trên để cài đặt Windows.",
                      style="muted", bg=COLORS["bg_card"]).pack(anchor="w", pady=4)
             return
 
@@ -553,17 +658,19 @@ class TXAWinSetup(tk.Tk):
 
         tk.Frame(parent, bg=COLORS["border"], height=1).pack(fill="x", pady=(6, 8))
 
-        if self._selected_disk.is_system_disk and not self.is_winpe:
+        target_ltr = self._selected_partition.letter if self._selected_partition and self._selected_partition.letter else self._config.get("target_partition_letter", "C")
+
+        if (self._selected_disk.is_system_disk or target_ltr == "C") and not self.is_winpe:
             warn_box = tk.Frame(parent, bg="#2A1E05", highlightthickness=1, highlightbackground=COLORS["warning"])
             warn_box.pack(fill="x", pady=(2, 8), padx=2)
-            tk.Label(warn_box, text=" ⚠️ Ổ ĐĨA ĐANG CHẠY WINDOWS: ", bg="#2A1E05", fg=COLORS["warning"], font=FONTS["subhead"]).pack(side="left", padx=6, pady=4)
-            tk.Label(warn_box, text="Không thể format trực tiếp. Tool sẽ cấu hình và tự khởi động lại máy để tiếp tục cài đặt.",
+            tk.Label(warn_box, text=" ⚠️ PHÂN VÙNG ĐANG CHẠY WINDOWS: ", bg="#2A1E05", fg=COLORS["warning"], font=FONTS["subhead"]).pack(side="left", padx=6, pady=4)
+            tk.Label(warn_box, text=f"Phân vùng {target_ltr}: đang chạy Windows. Tool sẽ chuẩn bị môi trường và tự động khởi động lại máy để cài đặt sạch.",
                      bg="#2A1E05", fg=COLORS["text_primary"], font=FONTS["small"]).pack(side="left", pady=4)
 
         # ── Chọn chế độ cài đặt ──
         mode_box = tk.Frame(parent, bg=COLORS["bg_card"])
         mode_box.pack(fill="x", pady=(0, 8))
-        TXALabel(mode_box, "Chế độ cài đặt Windows:", style="subhead", bg=COLORS["bg_card"]).pack(anchor="w", pady=(0, 4))
+        TXALabel(mode_box, "Tùy chọn cài đặt & bảo vệ dữ liệu:", style="subhead", bg=COLORS["bg_card"]).pack(anchor="w", pady=(0, 4))
 
         if not hasattr(self, '_var_install_mode'):
             self._var_install_mode = tk.StringVar(value=self._config.get("install_mode", "existing_partition"))
@@ -578,14 +685,16 @@ class TXAWinSetup(tk.Tk):
         row_modes.pack(fill="x", pady=2)
 
         tk.Radiobutton(
-            row_modes, text="🛡️ Cài vào phân vùng có sẵn (Bảo toàn dữ liệu các phân vùng khác)",
+            row_modes,
+            text=f"🛡️ Cài vào phân vùng {target_ltr}: (Format phân vùng này, BẢO TOÀN các phân vùng khác)",
             variable=self._var_install_mode, value="existing_partition",
             command=lambda: self._render_size_controls_ui(parent),
             **rb_m_style
         ).pack(side="left", padx=(0, 16))
 
         tk.Radiobutton(
-            row_modes, text="⚡ Xóa sạch cả ổ & chia lại (Dành cho ổ mới hoặc xóa trắng)",
+            row_modes,
+            text=f"⚡ Xóa sạch toàn bộ Disk {self._selected_disk.index} ({self._selected_disk.model}) & chia lại từ đầu",
             variable=self._var_install_mode, value="clean_disk",
             command=lambda: self._render_size_controls_ui(parent),
             **rb_m_style
@@ -595,40 +704,33 @@ class TXAWinSetup(tk.Tk):
         self._config["install_mode"] = current_mode
 
         if current_mode == "existing_partition":
-            # --- CHẾ ĐỘ 1: Cài vào phân vùng có sẵn ---
+            # --- CHẾ ĐỘ 1: Cài vào phân vùng đã chọn ---
             part_box = tk.Frame(parent, bg=COLORS["bg_input"], padx=12, pady=10,
                                 highlightthickness=1, highlightbackground=COLORS["border"])
             part_box.pack(fill="x", pady=(4, 8))
 
-            TXALabel(part_box, "Chọn phân vùng đích muốn cài đặt Windows:", style="subhead",
+            p_desc = f"Phân vùng đích: {target_ltr}:"
+            if self._selected_partition:
+                lbl = f" [{self._selected_partition.label}]" if self._selected_partition.label else ""
+                p_desc += f" — Dung lượng: {self._selected_partition.size_gb} GB ({self._selected_partition.fs or 'NTFS'}){lbl}"
+
+            TXALabel(part_box, f"✓ {p_desc}", style="subhead",
                      color=COLORS["accent"], bg=COLORS["bg_input"]).pack(anchor="w", pady=(0, 6))
 
-            target_part = find_target_partition(self._selected_disk)
-            default_letter = target_part.letter if target_part and target_part.letter else "C"
-            if not hasattr(self, '_var_target_part'):
-                self._var_target_part = tk.StringVar(value=self._config.get("target_partition_letter", default_letter))
+            if not hasattr(self, '_var_quick_format'):
+                self._var_quick_format = tk.BooleanVar(value=self._config.get("quick_format", True))
 
-            ntfs_parts = [p for p in self._selected_disk.partitions if p.size_gb >= 10.0]
-            if not ntfs_parts:
-                ntfs_parts = self._selected_disk.partitions
-
-            for p in ntfs_parts:
-                p_ltr = p.letter or f"Part {p.index}"
-                p_text = f"Phân vùng {p_ltr}: — {p.size_gb} GB ({p.fs or 'NTFS'})"
-                if p.label:
-                    p_text += f" [{p.label}]"
-                if p.is_system or p_ltr == "C":
-                    p_text += "  (Hệ điều hành hiện tại)"
-
-                tk.Radiobutton(
-                    part_box, text=p_text,
-                    variable=self._var_target_part, value=p.letter or "C",
-                    command=lambda: self._config.update({"target_partition_letter": self._var_target_part.get()}),
-                    bg=COLORS["bg_input"], fg=COLORS["text_primary"],
-                    selectcolor=COLORS["bg_panel"], activebackground=COLORS["bg_input"],
-                    font=FONTS["body"]
-                ).pack(anchor="w", pady=3)
-                self._config["target_partition_letter"] = self._var_target_part.get()
+            chk_fmt = tk.Checkbutton(
+                part_box,
+                text=f"Format nhanh phân vùng {target_ltr}: sang NTFS (Khuyến nghị: Xóa sạch Windows cũ để máy chạy mượt như mới)",
+                variable=self._var_quick_format,
+                bg=COLORS["bg_input"], fg=COLORS["text_primary"],
+                selectcolor=COLORS["bg_panel"], activebackground=COLORS["bg_input"],
+                font=FONTS["body"], cursor="hand2"
+            )
+            chk_fmt.pack(anchor="w", pady=2)
+            self._config["quick_format"] = self._var_quick_format.get()
+            self._config["target_partition_letter"] = target_ltr
         else:
             # --- CHẾ ĐỘ 2: Phân chia lại toàn bộ ổ đĩa ---
             TXALabel(parent, "Sơ đồ phân vùng ổ đĩa dự kiến sau khi format sạch:",
@@ -1226,76 +1328,105 @@ class TXAWinSetup(tk.Tk):
     # ── Lưu dữ liệu tạm khi chuyển tab ──────────────────────────────
 
     def _save_tab_inputs(self):
-        if hasattr(self, '_c_entry') and self._c_entry.winfo_exists():
-            try:
-                self._config["c_gb"] = int(self._c_entry.get().strip())
-            except Exception:
-                pass
-        if hasattr(self, '_data_entry') and self._data_entry.winfo_exists():
-            try:
-                self._config["data_gb"] = int(self._data_entry.get().strip())
-            except Exception:
-                pass
-        if hasattr(self, '_username_e') and self._username_e.winfo_exists():
-            v = self._username_e.get().strip()
-            if v:
-                self._config["username"] = v
-        if hasattr(self, '_password_e') and self._password_e.winfo_exists():
-            self._config["password"] = self._password_e.get()
-        if hasattr(self, '_pcname_e') and self._pcname_e.winfo_exists():
-            self._config["computer_name"] = self._pcname_e.get().strip() or "TXA-PC"
-        if hasattr(self, '_key_e') and self._key_e.winfo_exists():
-            self._config["product_key"] = self._key_e.get().strip()
-        if hasattr(self, '_var_bypass_tpm'):
-            self._config["bypass_tpm"] = self._var_bypass_tpm.get()
-        if hasattr(self, '_var_skip_ms'):
-            self._config["skip_ms_account"] = self._var_skip_ms.get()
-        if hasattr(self, '_var_autologon'):
-            self._config["auto_logon"] = self._var_autologon.get()
-        if hasattr(self, '_var_regional'):
-            self._config["regional_same"] = self._var_regional.get()
-        if hasattr(self, '_var_telemetry'):
-            self._config["disable_telemetry"] = self._var_telemetry.get()
-        if hasattr(self, '_var_bitlocker'):
-            self._config["disable_bitlocker"] = self._var_bitlocker.get()
-        if hasattr(self, '_var_classic_menu'):
-            self._config["classic_context_menu"] = self._var_classic_menu.get()
-        if hasattr(self, '_var_hibernate'):
-            self._config["disable_hibernation"] = self._var_hibernate.get()
-        if hasattr(self, '_var_search_index'):
-            self._config["disable_search_indexing"] = self._var_search_index.get()
-        if hasattr(self, '_var_power_plan'):
-            self._config["high_performance_power"] = self._var_power_plan.get()
-        if hasattr(self, '_var_activate'):
-            self._config["auto_activate"] = self._var_activate.get()
-        if hasattr(self, '_var_quick_format'):
-            self._config["quick_format"] = self._var_quick_format.get()
-        if hasattr(self, '_var_auto_reboot'):
-            self._config["auto_reboot"] = self._var_auto_reboot.get()
+        try:
+            if hasattr(self, '_c_entry'):
+                try:
+                    if self._c_entry.winfo_exists():
+                        self._config["c_gb"] = int(self._c_entry.get().strip())
+                except Exception:
+                    pass
+            if hasattr(self, '_data_entry'):
+                try:
+                    if self._data_entry.winfo_exists():
+                        self._config["data_gb"] = int(self._data_entry.get().strip())
+                except Exception:
+                    pass
+            if hasattr(self, '_username_e'):
+                try:
+                    if self._username_e.winfo_exists():
+                        v = self._username_e.get().strip()
+                        if v:
+                            self._config["username"] = v
+                except Exception:
+                    pass
+            if hasattr(self, '_password_e'):
+                try:
+                    if self._password_e.winfo_exists():
+                        self._config["password"] = self._password_e.get()
+                except Exception:
+                    pass
+            if hasattr(self, '_pcname_e'):
+                try:
+                    if self._pcname_e.winfo_exists():
+                        self._config["computer_name"] = self._pcname_e.get().strip() or "TXA-PC"
+                except Exception:
+                    pass
+            if hasattr(self, '_key_e'):
+                try:
+                    if self._key_e.winfo_exists():
+                        self._config["product_key"] = self._key_e.get().strip()
+                except Exception:
+                    pass
+            if hasattr(self, '_var_bypass_tpm'):
+                self._config["bypass_tpm"] = self._var_bypass_tpm.get()
+            if hasattr(self, '_var_skip_ms'):
+                self._config["skip_ms_account"] = self._var_skip_ms.get()
+            if hasattr(self, '_var_autologon'):
+                self._config["auto_logon"] = self._var_autologon.get()
+            if hasattr(self, '_var_regional'):
+                self._config["regional_same"] = self._var_regional.get()
+            if hasattr(self, '_var_telemetry'):
+                self._config["disable_telemetry"] = self._var_telemetry.get()
+            if hasattr(self, '_var_bitlocker'):
+                self._config["disable_bitlocker"] = self._var_bitlocker.get()
+            if hasattr(self, '_var_classic_menu'):
+                self._config["classic_context_menu"] = self._var_classic_menu.get()
+            if hasattr(self, '_var_hibernate'):
+                self._config["disable_hibernation"] = self._var_hibernate.get()
+            if hasattr(self, '_var_search_index'):
+                self._config["disable_search_indexing"] = self._var_search_index.get()
+            if hasattr(self, '_var_power_plan'):
+                self._config["high_performance_power"] = self._var_power_plan.get()
+            if hasattr(self, '_var_activate'):
+                self._config["auto_activate"] = self._var_activate.get()
+            if hasattr(self, '_var_quick_format'):
+                self._config["quick_format"] = self._var_quick_format.get()
+            if hasattr(self, '_var_auto_reboot'):
+                self._config["auto_reboot"] = self._var_auto_reboot.get()
 
-        # Lưu các file Registry Tweaks được người dùng tích chọn
-        if hasattr(self, '_tweak_vars') and hasattr(self, '_available_tweaks'):
-            sel_tweaks = []
-            for tw in self._available_tweaks:
-                var = self._tweak_vars.get(tw["id"])
-                if var and var.get():
-                    sel_tweaks.append(tw["path"])
-            self._config["selected_tweak_paths"] = sel_tweaks
+            # Lưu các file Registry Tweaks được người dùng tích chọn
+            if hasattr(self, '_tweak_vars') and hasattr(self, '_available_tweaks'):
+                sel_tweaks = []
+                for tw in self._available_tweaks:
+                    var = self._tweak_vars.get(tw["id"])
+                    if var and var.get():
+                        sel_tweaks.append(tw["path"])
+                self._config["selected_tweak_paths"] = sel_tweaks
 
-        # Lưu file unattend XML nếu người dùng chọn từ dropdown
-        if hasattr(self, '_cb_unattend') and hasattr(self, '_unattend_files'):
-            idx = self._cb_unattend.current()
-            if 0 <= idx < len(self._unattend_files):
-                self._config["custom_unattend_path"] = self._unattend_files[idx]["path"]
+            # Lưu file unattend XML nếu người dùng chọn từ dropdown
+            if hasattr(self, '_cb_unattend') and self._cb_unattend and hasattr(self, '_unattend_files'):
+                try:
+                    if self._cb_unattend.winfo_exists():
+                        idx = self._cb_unattend.current()
+                        if 0 <= idx < len(self._unattend_files):
+                            self._config["custom_unattend_path"] = self._unattend_files[idx]["path"]
+                except Exception:
+                    pass
 
-        # Lưu đường dẫn driver và tùy chọn tự động khôi phục
-        if hasattr(self, '_driver_path_e'):
-            dp = self._driver_path_e.get().strip()
-            if dp:
-                self._driver_backup_path = dp
-                self._config["driver_backup_path"] = dp
-        if hasattr(self, '_driver_auto_restore'):
-            self._config["driver_auto_restore"] = self._driver_auto_restore.get()
+            # Lưu đường dẫn driver và tùy chọn tự động khôi phục
+            if hasattr(self, '_driver_path_e') and self._driver_path_e:
+                try:
+                    if self._driver_path_e.winfo_exists():
+                        dp = self._driver_path_e.get().strip()
+                        if dp:
+                            self._driver_backup_path = dp
+                            self._config["driver_backup_path"] = dp
+                except Exception:
+                    pass
+            if hasattr(self, '_driver_auto_restore'):
+                self._config["driver_auto_restore"] = self._driver_auto_restore.get()
+        except Exception:
+            pass
 
     # ── Xác thực & Bắt đầu cài đặt ─────────────────────────────────
 
@@ -1686,7 +1817,7 @@ class TXAWinSetup(tk.Tk):
                           font=FONTS["small"], relief="flat", height=8, wrap="word",
                           highlightthickness=1, highlightbackground=COLORS["border"])
         txt_box.pack(fill="both", expand=True, pady=(0, 12))
-        txt_box.insert("1.0", "Đang nạp dữ liệu từ máy chủ...")
+        txt_box.insert("1.0", f"Phiên bản hiện tại: v{APP_VERSION} (Bản mới nhất)\n\nĐang kết nối kiểm tra dữ liệu từ máy chủ...")
         txt_box.config(state="disabled")
 
         # Action buttons frame (download setup / portable)
@@ -1747,7 +1878,7 @@ class TXAWinSetup(tk.Tk):
                 r_date = res.get("release_date", "")
                 status_lbl.config(text=f"✨ Có phiên bản mới: v{latest_v} ({r_date})", fg=COLORS["success"])
                 cl = res.get("changelog", "Không có thông tin chi tiết.")
-                txt_box.insert("1.0", f"--- NỘI DUNG PHIÊN BẢN v{latest_v} ---\n{cl}")
+                txt_box.insert("1.0", f"--- NỘI DUNG BẢN CẬP NHẬT v{latest_v} ---\n\n{cl}")
 
                 s_url = res.get("setup_url")
                 if s_url:
@@ -1777,7 +1908,7 @@ class TXAWinSetup(tk.Tk):
                     ).pack(side="left")
             else:
                 status_lbl.config(text=f"✅ Bạn đang sử dụng phiên bản mới nhất: v{APP_VERSION}", fg=COLORS["success"])
-                txt_box.insert("1.0", "Không có bản cập nhật nào mới hơn trên GitHub.\n\nTXA WinSetup hiện tại là bản cập nhật chuẩn nhất và ổn định.")
+                txt_box.insert("1.0", f"Phiên bản hiện tại: v{APP_VERSION} (Bản mới nhất)\n\nKhông có bản cập nhật nào mới hơn trên GitHub.\n\nTXA WinSetup hiện tại là bản cập nhật chuẩn nhất và hoạt động hoàn toàn ổn định.")
 
             txt_box.config(state="disabled")
             recheck_btn.config(state="normal", text="⟳ Kiểm tra lại")

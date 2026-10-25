@@ -37,6 +37,8 @@ TPM_BYPASS_REG = """
 """
 
 def generate_setup_complete(
+    username: str = "Admin",
+    password: str = "",
     classic_context_menu: bool = True,
     disable_bitlocker: bool = True,
     disable_telemetry: bool = True,
@@ -48,6 +50,19 @@ def generate_setup_complete(
 ) -> str:
     """Tạo nội dung SetupComplete.cmd để chạy ngầm tinh chỉnh sau khi cài xong."""
     cmds = ["@echo off", "chcp 65001 >nul", ":: TXA WinSetup - Post Install Tweaks"]
+
+    # Đảm bảo tài khoản Local Admin luôn tồn tại và hoạt động kể cả trên Win 11 Insider Preview 29695+
+    if username:
+        cmds.append(":: [TXA] Khoi tao va cap quyen Local Admin (Bypass moi gioi han OOBE cua Win 11 24H2/29695+)")
+        pwd_arg = f'"{password}"' if password else '""'
+        cmds.append(f'net user "{username}" {pwd_arg} /add >nul 2>&1')
+        cmds.append(f'net localgroup administrators "{username}" /add >nul 2>&1')
+        cmds.append('net accounts /maxpwage:unlimited >nul 2>&1')
+        cmds.append('reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\OOBE" /v BypassNRO /t REG_DWORD /d 1 /f >nul 2>&1')
+        cmds.append('reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\OOBE" /v HideOnlineAccountScreens /t REG_DWORD /d 1 /f >nul 2>&1')
+        cmds.append('reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\OOBE" /v NetworkRequestStatus /t REG_DWORD /d 0 /f >nul 2>&1')
+        cmds.append('reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\OOBE" /v ProtectYourPC /t REG_DWORD /d 3 /f >nul 2>&1')
+
 
     if disable_bitlocker:
         cmds.append(":: [TXA] Tat ma hoa o dia tu dong BitLocker")

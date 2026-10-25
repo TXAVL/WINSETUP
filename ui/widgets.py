@@ -408,3 +408,72 @@ class TXADiskCard(tk.Frame):
     def _click(self, _):
         if self.on_select:
             self.on_select(self.disk)
+
+
+class TXAPartitionCard(tk.Frame):
+    """Card hiển thị 1 phân vùng ổ đĩa để người dùng trực tiếp chọn phân vùng muốn cài Windows."""
+    def __init__(self, parent, disk, partition, on_select=None, selected=False, **kw):
+        super().__init__(parent, bg=COLORS["bg_card"], cursor="hand2", **kw)
+        self.disk = disk
+        self.partition = partition
+        self.on_select = on_select
+        self.selected = selected
+        self._build()
+        self._bind_click_recursive(self)
+
+    def _bind_click_recursive(self, widget):
+        widget.bind("<Button-1>", self._click)
+        for child in widget.winfo_children():
+            self._bind_click_recursive(child)
+
+    def _build(self):
+        border_col = COLORS["accent"] if self.selected else COLORS["border"]
+        self.configure(
+            highlightthickness=2,
+            highlightbackground=border_col,
+            padx=14, pady=10
+        )
+        from .theme import COLORS as C, FONTS as F
+        p = self.partition
+        d = self.disk
+
+        # Row 1: Badges & status
+        hdr = tk.Frame(self, bg=C["bg_card"])
+        hdr.pack(fill="x")
+
+        # Badge phân vùng
+        p_badge = f"  Ổ {p.letter}:\\  " if p.letter else f"  Phân vùng {p.index}  "
+        badge_bg = C["accent"] if self.selected else (C["warning"] if (p.is_system or p.letter == "C") else C["info"])
+        tk.Label(hdr, text=p_badge, bg=badge_bg, fg=C["bg_dark"], font=F["subhead"], padx=6, pady=2).pack(side="left")
+
+        # Label tên phân vùng & dung lượng
+        label_text = f" [{p.label}]" if p.label else ""
+        fs_text = f" ({p.fs})" if p.fs else ""
+        tk.Label(hdr, text=f"  {p.size_gb} GB{fs_text}{label_text}", bg=C["bg_card"], fg=C["text_primary"], font=F["heading"]).pack(side="left")
+
+        # Cảnh báo nếu là ổ đang chạy Windows
+        if p.is_system or (p.letter == "C" and not d.is_system_disk):
+            tk.Label(hdr, text=" ⚠️ PHÂN VÙNG WINDOWS HIỆN TẠI ", bg=C["warning"], fg=C["bg_dark"], font=F["small"], padx=4).pack(side="right")
+        elif d.is_system_disk and p.letter == "C":
+            tk.Label(hdr, text=" ⚠️ ĐANG CHẠY WINDOWS (TỰ REBOOT) ", bg=C["warning"], fg=C["bg_dark"], font=F["small"], padx=4).pack(side="right")
+        elif p.bitlocker_status == "On":
+            tk.Label(hdr, text=" 🔒 BITLOCKER ", bg=C["info"], fg="#FFFFFF", font=F["small"], padx=4).pack(side="right")
+
+        # Row 2: Chi tiết ổ đĩa vật lý chứa phân vùng này
+        sub_row = tk.Frame(self, bg=C["bg_card"])
+        sub_row.pack(fill="x", pady=(6, 0))
+
+        free_info = f"Còn trống: {p.free_gb} GB  •  " if p.free_gb > 0 else ""
+        disk_desc = f"{free_info}Nằm trên Disk {d.index} ({d.model} — {d.interface} {d.size_gb} GB)"
+        tk.Label(sub_row, text=disk_desc, bg=C["bg_card"], fg=C["text_secondary"], font=F["small"]).pack(side="left")
+
+    def set_selected(self, val: bool):
+        self.selected = val
+        self.configure(
+            highlightbackground=COLORS["accent"] if val else COLORS["border"]
+        )
+
+    def _click(self, _):
+        if self.on_select:
+            self.on_select(self.disk, self.partition)
+

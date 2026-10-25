@@ -240,6 +240,7 @@ def write_unattend(
         try:
             shutil.copy2(custom_unattend, panther / "unattend.xml")
             shutil.copy2(custom_unattend, sysprep / "unattend.xml")
+            shutil.copy2(custom_unattend, Path(f"{windows_drive}:\\autounattend.xml"))
         except Exception as e:
             log_cb(progress, f"[WARN] Không copy được file unattend tùy chọn: {e}", 89)
     else:
@@ -256,6 +257,7 @@ def write_unattend(
         )
         try:
             (sysprep / "unattend.xml").write_text(xml, encoding="utf-8")
+            (Path(f"{windows_drive}:\\autounattend.xml")).write_text(xml, encoding="utf-8")
         except Exception:
             pass
 
@@ -275,6 +277,8 @@ def write_unattend(
     # Ghi SetupComplete.cmd chứa các tweak tinh chỉnh hệ thống TXA
     from .unattend import generate_setup_complete
     setup_cmd_content = generate_setup_complete(
+        username=config.get("username", "User"),
+        password=config.get("password", ""),
         classic_context_menu=config.get("classic_context_menu", True),
         disable_bitlocker=config.get("disable_bitlocker", True),
         disable_telemetry=config.get("disable_telemetry", True),

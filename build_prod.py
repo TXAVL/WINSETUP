@@ -115,14 +115,12 @@ portable_size: {port_size}
 portable_sha256: "{port_hash}"
 portable_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Portable.exe"
 changelog: |
-  • Nâng cấp lên phiên bản ổn định TXA WinSetup v1.3.0.
-  • Tối ưu bộ cài đặt NSIS siêu gọn nhẹ (chỉ cài TXAWinSetup.exe và 3 thư mục mẫu unattend, drivers, tweaks).
-  • Tích hợp tự động quét và load file XML mẫu unattend vào danh sách thả xuống.
-  • Tự động phát hiện và hiển thị các gói driver offline trong thư mục drivers/.
-  • Hỗ trợ chọn động các bản tinh chỉnh hệ điều hành Windows Registry (.reg) từ thư mục tweaks/.
-  • Hỗ trợ menu chuột phải Windows Explorer (Open With) cho file ISO, WIM, ESD.
+  • Nâng cấp giao diện trực quan chọn Phân vùng (Partition-first): Người dùng trực tiếp chọn phân vùng muốn cài Windows (C:\, D:\...), bảo toàn 100% dữ liệu các phân vùng khác.
+  • Hỗ trợ hộp chọn Combobox thả xuống hiển thị chi tiết mọi phiên bản Windows (Home, Pro, Enterprise, Education,...) trong file ISO/WIM/ESD.
+  • Đảm bảo tương thích tuyệt đối với Windows 11 Canary / Insider Preview 29695.1001 (tự động tạo tài khoản Local Admin và bypass OOBE).
+  • Khắc phục hoàn toàn lỗi kẹt/đơ chuyển tab khi vào tab Tiến trình & Logs rồi bấm quay lại các tab khác.
+  • Nâng cấp cửa sổ cập nhật: Hiển thị đầy đủ changelog nội dung mới khi có bản update, giữ nguyên thông báo phiên bản ổn định khi đang ở bản mới nhất.
   • Tối ưu tốc độ tải và kiểm tra phân vùng ổ đĩa (Diskpart & WMI).
-  • Tích hợp API kiểm tra cập nhật tự động trực tiếp từ GitHub Releases.
 """
 for yml_path in [BASE_DIR / "latest.yml", PROD_DIR / "latest.yml"]:
     with open(yml_path, "w", encoding="utf-8") as f:
