@@ -31,7 +31,7 @@ def parse_simple_yaml(text: str) -> Dict[str, Any]:
             continue
             
         if in_multiline:
-            if line.startswith("    ") or line.startswith("\t\t") or (line.startswith("  ") and not ":" in line):
+            if line.startswith("  ") or line.startswith("\t"):
                 multiline_buf.append(stripped)
                 continue
             else:

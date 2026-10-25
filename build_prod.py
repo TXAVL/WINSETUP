@@ -115,13 +115,12 @@ portable_size: {port_size}
 portable_sha256: "{port_hash}"
 portable_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Portable.exe"
 changelog: |
-  --- NỘI DUNG PHIÊN BẢN v1.4.0 ---
-  • Nâng cấp giao diện trực quan chọn Phân vùng (Partition-first): Người dùng trực tiếp chọn phân vùng muốn cài Windows, bảo toàn 100% dữ liệu các phân vùng khác.
-  • Hỗ trợ hộp chọn Combobox thả xuống hiển thị chi tiết mọi phiên bản Windows trong file ISO/WIM/ESD.
-  • Đảm bảo tương thích tuyệt đối với Windows 11 Canary / Insider Preview 29695.1001 (tự động tạo tài khoản Local Admin và bypass OOBE).
-  • Khắc phục hoàn toàn lỗi kẹt/đơ chuyển tab khi vào tab Tiến trình & Logs rồi bấm quay lại các tab khác.
-  • Nâng cấp cửa sổ cập nhật: Hiển thị đầy đủ changelog nội dung mới khi có bản update, giữ nguyên thông báo phiên bản ổn định khi đang ở bản mới nhất.
-  • Tối ưu tốc độ tải và kiểm tra phân vùng ổ đĩa (Diskpart & WMI).
+    • Nâng cấp giao diện trực quan chọn Phân vùng (Partition-first): Người dùng trực tiếp chọn phân vùng muốn cài Windows, bảo toàn 100% dữ liệu các phân vùng khác.
+    • Hỗ trợ hộp chọn Combobox thả xuống hiển thị chi tiết mọi phiên bản Windows trong file ISO/WIM/ESD.
+    • Đảm bảo tương thích tuyệt đối với Windows 11 Canary / Insider Preview 29695.1001 (tự động tạo tài khoản Local Admin và bypass OOBE).
+    • Khắc phục hoàn toàn lỗi kẹt/đơ chuyển tab khi vào tab Tiến trình & Logs rồi bấm quay lại các tab khác.
+    • Nâng cấp cửa sổ cập nhật: Hiển thị đầy đủ changelog nội dung mới khi có bản update, giữ nguyên thông báo phiên bản ổn định khi đang ở bản mới nhất.
+    • Tối ưu tốc độ tải và kiểm tra phân vùng ổ đĩa (Diskpart & WMI).
 """
 for yml_path in [BASE_DIR / "latest.yml", PROD_DIR / "latest.yml"]:
     with open(yml_path, "w", encoding="utf-8") as f:
