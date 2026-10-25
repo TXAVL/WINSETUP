@@ -1817,8 +1817,71 @@ class TXAWinSetup(tk.Tk):
                           font=FONTS["small"], relief="flat", height=8, wrap="word",
                           highlightthickness=1, highlightbackground=COLORS["border"])
         txt_box.pack(fill="both", expand=True, pady=(0, 12))
-        txt_box.insert("1.0", f"Phiên bản hiện tại: v{APP_VERSION} (Bản mới nhất)\n\nĐang kết nối kiểm tra dữ liệu từ máy chủ...")
-        txt_box.config(state="disabled")
+        def render_markdown(text_widget, md_text: str):
+            import re
+            text_widget.config(state="normal")
+            text_widget.delete("1.0", "end")
+
+            text_widget.tag_configure("md_header_bar", font=("Segoe UI", 10, "bold"), foreground=COLORS["accent"], justify="center", spacing1=4, spacing3=8)
+            text_widget.tag_configure("md_h1", font=("Segoe UI", 11, "bold"), foreground=COLORS["accent"], spacing1=6, spacing3=4)
+            text_widget.tag_configure("md_h2", font=("Segoe UI", 10, "bold"), foreground=COLORS["text_primary"], spacing1=4, spacing3=2)
+            text_widget.tag_configure("md_bold", font=("Segoe UI", 9, "bold"), foreground="#FFFFFF")
+            text_widget.tag_configure("md_code", font=("Consolas", 9), foreground="#38BDF8", background="#1E293B")
+            text_widget.tag_configure("md_bullet_dot", font=("Segoe UI", 10, "bold"), foreground=COLORS["accent"])
+            text_widget.tag_configure("md_bullet_text", font=("Segoe UI", 9), foreground=COLORS["text_primary"], lmargin1=14, lmargin2=28, spacing2=2, spacing3=4)
+            text_widget.tag_configure("md_normal", font=("Segoe UI", 9), foreground=COLORS["text_primary"], spacing2=2, spacing3=3)
+
+            # Đảm bảo các style đặc biệt (bold, code) có độ ưu tiên cao hơn tag dòng
+            text_widget.tag_raise("md_bold")
+            text_widget.tag_raise("md_code")
+
+            lines = md_text.splitlines()
+            for line in lines:
+                stripped = line.strip()
+                if not stripped:
+                    text_widget.insert("end", "\n")
+                    continue
+
+                if stripped.startswith("---") and len(stripped.replace("-", "").strip()) > 0:
+                    text_widget.insert("end", f"{stripped}\n\n", ("md_header_bar",))
+                    continue
+                elif stripped.startswith("# "):
+                    text_widget.insert("end", f"{stripped[2:].strip()}\n", ("md_h1",))
+                    continue
+                elif stripped.startswith("## ") or stripped.startswith("### "):
+                    title = re.sub(r"^#+\s*", "", stripped)
+                    text_widget.insert("end", f"{title}\n", ("md_h2",))
+                    continue
+
+                is_bullet = stripped.startswith(("•", "-", "*"))
+                if is_bullet:
+                    content = re.sub(r"^[•\-\*]\s*", "", stripped)
+                    text_widget.insert("end", " • ", ("md_bullet_dot",))
+                    line_tag = "md_bullet_text"
+                else:
+                    content = stripped
+                    line_tag = "md_normal"
+
+                # Hỗ trợ tự động làm nổi bật tiêu đề bullet nếu chưa có cú pháp markdown **...**
+                if is_bullet and "**" not in content and ":" in content:
+                    first_part, sep, rest = content.partition(":")
+                    content = f"**{first_part}**:{rest}"
+
+                parts = re.split(r"(\*\*.*?\*\*|`.*?`)", content)
+                for part in parts:
+                    if not part:
+                        continue
+                    if part.startswith("**") and part.endswith("**") and len(part) >= 4:
+                        text_widget.insert("end", part[2:-2], ("md_bold", line_tag))
+                    elif part.startswith("`") and part.endswith("`") and len(part) >= 2:
+                        text_widget.insert("end", f" {part[1:-1]} ", ("md_code", line_tag))
+                    else:
+                        text_widget.insert("end", part, (line_tag,))
+                text_widget.insert("end", "\n")
+
+            text_widget.config(state="disabled")
+
+        render_markdown(txt_box, f"--- NỘI DUNG PHIÊN BẢN v{APP_VERSION} ---\n\nĐang kết nối kiểm tra dữ liệu cập nhật từ GitHub...")
 
         # Action buttons frame (download setup / portable)
         btn_action_frame = tk.Frame(content, bg=COLORS["bg_dark"])
@@ -1867,18 +1930,18 @@ class TXAWinSetup(tk.Tk):
         def apply_result(res):
             for w in btn_action_frame.winfo_children():
                 w.destroy()
-            txt_box.config(state="normal")
-            txt_box.delete("1.0", "end")
 
             if not res.get("success"):
                 status_lbl.config(text="❌ Không thể kết nối tới máy chủ cập nhật", fg=COLORS["error"])
-                txt_box.insert("1.0", f"Lỗi: {res.get('error', 'Không có kết nối mạng hoặc GitHub không phản hồi.')}")
+                render_markdown(txt_box, f"--- THÔNG BÁO LỖI ---\n\n• **Lỗi kết nối**: {res.get('error', 'Không có kết nối mạng hoặc GitHub không phản hồi.')}")
             elif res.get("has_update"):
                 latest_v = res.get("latest_version")
                 r_date = res.get("release_date", "")
                 status_lbl.config(text=f"✨ Có phiên bản mới: v{latest_v} ({r_date})", fg=COLORS["success"])
                 cl = res.get("changelog", "Không có thông tin chi tiết.")
-                txt_box.insert("1.0", f"--- NỘI DUNG BẢN CẬP NHẬT v{latest_v} ---\n\n{cl}")
+                if not cl.strip().startswith("---"):
+                    cl = f"--- NỘI DUNG PHIÊN BẢN v{latest_v} ---\n\n" + cl
+                render_markdown(txt_box, cl)
 
                 s_url = res.get("setup_url")
                 if s_url:
@@ -1908,9 +1971,14 @@ class TXAWinSetup(tk.Tk):
                     ).pack(side="left")
             else:
                 status_lbl.config(text=f"✅ Bạn đang sử dụng phiên bản mới nhất: v{APP_VERSION}", fg=COLORS["success"])
-                txt_box.insert("1.0", f"Phiên bản hiện tại: v{APP_VERSION} (Bản mới nhất)\n\nKhông có bản cập nhật nào mới hơn trên GitHub.\n\nTXA WinSetup hiện tại là bản cập nhật chuẩn nhất và hoạt động hoàn toàn ổn định.")
+                cl = res.get("changelog", "")
+                if cl:
+                    if not cl.strip().startswith("---"):
+                        cl = f"--- NỘI DUNG PHIÊN BẢN v{APP_VERSION} ---\n\n" + cl
+                    render_markdown(txt_box, cl)
+                else:
+                    render_markdown(txt_box, f"--- NỘI DUNG PHIÊN BẢN v{APP_VERSION} ---\n\n• **Phiên bản hiện tại**: v{APP_VERSION} (Bản mới nhất)\n• Không có bản cập nhật nào mới hơn trên GitHub.\n• TXA WinSetup hiện tại là bản cập nhật chuẩn nhất và hoạt động hoàn toàn ổn định.")
 
-            txt_box.config(state="disabled")
             recheck_btn.config(state="normal", text="⟳ Kiểm tra lại")
 
         def run_check():
