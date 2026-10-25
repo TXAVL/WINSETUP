@@ -3,20 +3,17 @@ release_date: "2026-10-25"
 repository: "TXAVL/WINSETUP"
 channel: "stable"
 setup_name: "TXAWinSetup_Setup.exe"
-setup_size: 16410331
-setup_sha256: "48F77E242158DB52D3C8983BB0820E645EC06425D6360C3BDD106FAB0B00A2C2"
+setup_size: 16411773
+setup_sha256: "475EDBFE365E132FA8FDE6FBD673668A1CC51F375B99B4F8E837FBBC62464736"
 setup_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Setup.exe"
 portable_name: "TXAWinSetup_Portable.exe"
-portable_size: 16536777
-portable_sha256: "1096E6161B4B932EE0EB353DD706D2F9D6AD47BFD21CA7A71B0710A2B9F7EC66"
+portable_size: 16537690
+portable_sha256: "77AAC0B2CC2DDAC764686E82FA8598B4C3A71044BE0968B61D7745E144E1A8A2"
 portable_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Portable.exe"
 changelog: |
-  • Nâng cấp phiên bản TXA WinSetup v1.4.0.
-  • Tự động thiết lập mô tả hệ thống Windows: "Win 11 create by TXA Studio, date: [Ngày chạy tool]. Version: [Version]".
-  • Đổi tên máy tính mặc định (Computer Name) thành TXA-WIN.
-  • Tích hợp bộ Avatar người dùng và OEM Logo TXA Studio, tự động áp dụng avatar mặc định cho tài khoản Windows.
   • Nâng cấp giao diện trực quan chọn Phân vùng (Partition-first): Người dùng trực tiếp chọn phân vùng muốn cài Windows, bảo toàn 100% dữ liệu các phân vùng khác.
   • Hỗ trợ hộp chọn Combobox thả xuống hiển thị chi tiết mọi phiên bản Windows trong file ISO/WIM/ESD.
   • Đảm bảo tương thích tuyệt đối với Windows 11 Canary / Insider Preview 29695.1001 (tự động tạo tài khoản Local Admin và bypass OOBE).
   • Khắc phục hoàn toàn lỗi kẹt/đơ chuyển tab khi vào tab Tiến trình & Logs rồi bấm quay lại các tab khác.
   • Nâng cấp cửa sổ cập nhật: Hiển thị đầy đủ changelog nội dung mới khi có bản update, giữ nguyên thông báo phiên bản ổn định khi đang ở bản mới nhất.
+  • Tối ưu tốc độ tải và kiểm tra phân vùng ổ đĩa (Diskpart & WMI).

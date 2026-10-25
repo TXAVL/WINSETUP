@@ -1,7 +1,7 @@
 """
 Orchestrator cài đặt: diskpart, apply WIM, bootloader, unattend, recovery setup
 """
-import subprocess, os, tempfile, shutil, time
+import subprocess, os, sys, tempfile, shutil, time
 from pathlib import Path
 from typing import Callable, Optional
 from .state import InstallState, Step
