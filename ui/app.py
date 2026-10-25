@@ -549,32 +549,43 @@ class TXAWinSetup(tk.Tk):
         """Tự động tìm và chọn phân vùng cài đặt Windows phù hợp nhất (ưu tiên phân vùng C:)."""
         if not self._disks:
             return
-        # Ưu tiên 1: Phân vùng C: (hệ điều hành hiện tại)
+
+        def _is_valid_target(p) -> bool:
+            if p.size_gb < 20.0:
+                return False
+            if p.type in ("EFI", "System", "MSR", "Reserved", "Recovery"):
+                return False
+            return True
+
+        # Ưu tiên 1: Phân vùng C: (hệ điều hành hiện tại) và dung lượng >= 20GB
         for d in self._disks:
             for p in d.partitions:
-                if p.letter == "C" or p.is_system:
+                if (p.letter == "C" or p.is_system) and _is_valid_target(p):
                     self._selected_disk = d
                     self._selected_partition = p
                     self._config["install_mode"] = "existing_partition"
                     self._config["target_partition_letter"] = "C"
                     return
+
         # Ưu tiên 2: Phân vùng NTFS có dung lượng >= 30 GB
         for d in self._disks:
             for p in d.partitions:
-                if p.size_gb >= 30.0 and (p.fs or "").upper() == "NTFS":
+                if (p.fs or "").upper() == "NTFS" and _is_valid_target(p):
                     self._selected_disk = d
                     self._selected_partition = p
                     self._config["install_mode"] = "existing_partition"
                     self._config["target_partition_letter"] = p.letter or f"Part {p.index}"
                     return
-        # Ưu tiên 3: Phân vùng đầu tiên
+
+        # Ưu tiên 3: Bất kỳ phân vùng hợp lệ nào (>= 20 GB)
         for d in self._disks:
-            if d.partitions:
-                self._selected_disk = d
-                self._selected_partition = d.partitions[0]
-                self._config["install_mode"] = "existing_partition"
-                self._config["target_partition_letter"] = d.partitions[0].letter or f"Part {d.partitions[0].index}"
-                return
+            for p in d.partitions:
+                if _is_valid_target(p):
+                    self._selected_disk = d
+                    self._selected_partition = p
+                    self._config["install_mode"] = "existing_partition"
+                    self._config["target_partition_letter"] = p.letter or f"Part {p.index}"
+                    return
 
     def _load_disks_background(self):
         def _worker():
@@ -641,6 +652,12 @@ class TXAWinSetup(tk.Tk):
             self._partition_cards[key] = card
 
     def _select_partition(self, disk, partition):
+        # Kiểm tra nếu người dùng click vào phân vùng EFI / MSR / Recovery hoặc quá nhỏ
+        if partition.size_gb < 15.0 or partition.type in ("EFI", "System", "MSR", "Reserved", "Recovery"):
+            p_name = f"ổ {partition.letter}:\\" if partition.letter else f"Phân vùng {partition.index}"
+            self._set_status(f"⚠️ {p_name} ({partition.size_gb} GB, loại {partition.type}) là phân vùng hệ thống, không thể chọn để cài đặt Windows!", COLORS["warning"])
+            return
+
         self._selected_disk = disk
         self._selected_partition = partition
         self._config["install_mode"] = "existing_partition"
@@ -657,7 +674,8 @@ class TXAWinSetup(tk.Tk):
             self._render_size_controls_ui(self._size_frame)
 
         p_name = f"ổ {partition.letter}:\\" if partition.letter else f"phân vùng {partition.index}"
-        if (partition.is_system or partition.letter == "C" or disk.is_system_disk) and not self.is_winpe:
+        is_cur_win = (partition.is_system or partition.letter == "C") and partition.size_gb >= 15.0
+        if is_cur_win and not self.is_winpe:
             self._set_status(f"Đã chọn {p_name} (Windows hiện tại - Tool sẽ tự động reboot để cài sạch an toàn)", COLORS["warning"])
         else:
             self._set_status(f"Đã chọn {p_name} ({partition.size_gb} GB) trên Disk {disk.index}", COLORS["success"])
@@ -677,8 +695,9 @@ class TXAWinSetup(tk.Tk):
         tk.Frame(parent, bg=COLORS["border"], height=1).pack(fill="x", pady=(6, 8))
 
         target_ltr = self._selected_partition.letter if self._selected_partition and self._selected_partition.letter else self._config.get("target_partition_letter", "C")
+        is_cur_win = (self._selected_partition and (self._selected_partition.is_system or target_ltr == "C") and self._selected_partition.size_gb >= 15.0) and not self.is_winpe
 
-        if (self._selected_disk.is_system_disk or target_ltr == "C") and not self.is_winpe:
+        if is_cur_win:
             warn_box = tk.Frame(parent, bg="#2A1E05", highlightthickness=1, highlightbackground=COLORS["warning"])
             warn_box.pack(fill="x", pady=(2, 8), padx=2)
             tk.Label(warn_box, text=" ⚠️ PHÂN VÙNG ĐANG CHẠY WINDOWS: ", bg="#2A1E05", fg=COLORS["warning"], font=FONTS["subhead"]).pack(side="left", padx=6, pady=4)
@@ -1475,8 +1494,15 @@ class TXAWinSetup(tk.Tk):
                 return False
         else:
             target_ltr = self._config.get("target_partition_letter", "")
-            if not target_ltr:
+            if not target_ltr or not self._selected_partition:
                 messagebox.showerror("Chưa chọn phân vùng", "Vui lòng chọn một phân vùng để cài đặt Windows!")
+                return False
+            if self._selected_partition.size_gb < 20.0 or self._selected_partition.type in ("EFI", "System", "MSR", "Reserved", "Recovery"):
+                messagebox.showerror(
+                    "Phân vùng không hợp lệ",
+                    f"Phân vùng đã chọn ({self._selected_partition.size_gb} GB, loại {self._selected_partition.type}) là phân vùng hệ thống hoặc quá nhỏ!\n\n"
+                    "Windows yêu cầu phân vùng cài đặt có dung lượng tối thiểu từ 20 GB trở lên."
+                )
                 return False
 
         # 3. Kiểm tra User

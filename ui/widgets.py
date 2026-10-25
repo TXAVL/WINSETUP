@@ -498,19 +498,37 @@ class TXAPartitionCard(tk.Frame):
         p = self.partition
         d = self.disk
 
+        # Xác định vai trò phân vùng
+        is_win_os = (p.is_system or p.letter == "C") and p.size_gb >= 15.0
+        is_system_part = p.type in ("EFI", "System", "MSR", "Reserved", "Recovery") or p.size_gb < 15.0
+
         # Row 1: Badges & status
         hdr = tk.Frame(self, bg=bg)
         hdr.pack(fill="x")
 
         # Radio checkmark icon
-        radio_icon = "●" if self.selected else "○"
-        radio_color = C["accent"] if self.selected else C["text_muted"]
+        if is_system_part and not is_win_os:
+            radio_icon = "⊘"
+            radio_color = C["text_muted"]
+        else:
+            radio_icon = "●" if self.selected else "○"
+            radio_color = C["accent"] if self.selected else C["text_muted"]
         tk.Label(hdr, text=radio_icon, bg=bg, fg=radio_color, font=("Segoe UI", 12, "bold")).pack(side="left", padx=(0, 8))
 
         # Badge phân vùng
         p_badge = f"  Ổ {p.letter}:\\  " if p.letter else f"  Phân vùng {p.index}  "
-        badge_bg = C["accent"] if self.selected else (C["warning"] if (p.is_system or p.letter == "C") else C["info"])
-        badge_fg = "#FFFFFF" if (self.selected or p.is_system or p.letter == "C") else C["bg_dark"]
+        if self.selected:
+            badge_bg = C["accent"]
+            badge_fg = "#FFFFFF"
+        elif is_win_os:
+            badge_bg = C["warning"]
+            badge_fg = "#000000"
+        elif is_system_part:
+            badge_bg = "#1E293B"
+            badge_fg = "#94A3B8"
+        else:
+            badge_bg = C["info"]
+            badge_fg = C["bg_dark"]
         tk.Label(hdr, text=p_badge, bg=badge_bg, fg=badge_fg, font=F["subhead"], padx=6, pady=2).pack(side="left")
 
         # Label tên phân vùng & dung lượng
@@ -518,11 +536,15 @@ class TXAPartitionCard(tk.Frame):
         fs_text = f" • {p.fs}" if p.fs else ""
         tk.Label(hdr, text=f"  {p.size_gb} GB{fs_text}{label_text}", bg=bg, fg=C["text_primary"], font=F["heading"]).pack(side="left")
 
-        # Cảnh báo nếu là ổ đang chạy Windows
-        if p.is_system or (p.letter == "C" and not d.is_system_disk):
+        # Badges trạng thái bên phải
+        if is_win_os:
             tk.Label(hdr, text=" ⚠️ WINDOWS HIỆN TẠI (TỰ REBOOT) ", bg=C["warning"], fg="#000000", font=F["badge"], padx=5, pady=2).pack(side="right")
-        elif d.is_system_disk and p.letter == "C":
-            tk.Label(hdr, text=" ⚠️ WINDOWS HIỆN TẠI (TỰ REBOOT) ", bg=C["warning"], fg="#000000", font=F["badge"], padx=5, pady=2).pack(side="right")
+        elif p.type in ("EFI", "System") or (p.size_gb < 2.0 and p.fs == "FAT32"):
+            tk.Label(hdr, text=" 🛡 EFI BOOT ", bg="#1E293B", fg="#94A3B8", font=F["badge"], padx=5, pady=2).pack(side="right")
+        elif p.type in ("MSR", "Reserved"):
+            tk.Label(hdr, text=" ⚙ MSR DỰ TRỮ ", bg="#1E293B", fg="#94A3B8", font=F["badge"], padx=5, pady=2).pack(side="right")
+        elif p.type == "Recovery" or "Recovery" in (p.label or ""):
+            tk.Label(hdr, text=" 🔄 RECOVERY ", bg="#1E293B", fg="#94A3B8", font=F["badge"], padx=5, pady=2).pack(side="right")
         elif p.bitlocker_status == "On":
             tk.Label(hdr, text=" 🔒 BITLOCKER ", bg=C["info"], fg="#FFFFFF", font=F["badge"], padx=5, pady=2).pack(side="right")
 

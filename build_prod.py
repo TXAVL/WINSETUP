@@ -115,6 +115,7 @@ portable_size: {port_size}
 portable_sha256: "{port_hash}"
 portable_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Portable.exe"
 changelog: |
+    • Khắc phục triệt để lỗi nhận diện nhầm phân vùng boot EFI (0.2 GB) thành phân vùng Windows đang chạy: Bổ sung bộ lọc dung lượng và phân loại chuẩn xác (EFI Boot, MSR, Recovery), tự động chọn đúng phân vùng Windows OS (ổ C:) và ngăn chặn tuyệt đối việc cài đặt nhầm vào phân vùng hệ thống nhỏ.
     • Đột phá toàn diện giao diện người dùng (Cyber Obsidian UI 2.0): Nâng cấp bảng màu Obsidian & Sunset Orange độ tương phản cao, phong cách hiện đại chống mỏi mắt.
     • Thiết kế thanh điều hướng Tab dạng Segmented Pill: Hiệu ứng chuyển động mượt mà, phân tách rõ ràng từng giai đoạn cấu hình.
     • Thanh hiển thị dung lượng phân vùng trực quan (Mini Capacity Bar): Trực tiếp xem dung lượng đã dùng, còn trống và định dạng ổ đĩa tương tự Windows Explorer.

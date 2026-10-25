@@ -121,8 +121,10 @@ def _get_disks_via_powershell() -> List[Disk]:
         system_disk_num = None
         if not is_winpe():
             for p in part_list:
-                if (p.get("IsBoot") or p.get("IsSystem")) and p.get("DriveLetter") == "C":
+                p_size_gb = round((p.get("Size") or 0) / (1024**3), 2)
+                if (p.get("IsBoot") or p.get("DriveLetter") == "C") and p_size_gb >= 15.0:
                     system_disk_num = p.get("DiskNumber")
+                    break
 
         disks = []
         for d in disk_list:
@@ -153,13 +155,35 @@ def _get_disks_via_powershell() -> List[Disk]:
                 p_size_bytes = p.get("Size", 0) or 0
                 p_size_mb = p_size_bytes // (1024**2)
                 p_size_gb = round(p_size_bytes / (1024**3), 2)
-                p_type = p.get("Type", "Primary") or "Primary"
+                raw_type = p.get("Type", "Primary") or "Primary"
 
                 vol = vol_map.get(letter, {})
                 label = vol.get("FileSystemLabel", "") or ""
                 fs = vol.get("FileSystem", "") or ""
                 free_bytes = vol.get("SizeRemaining", 0) or 0
                 free_gb = round(free_bytes / (1024**3), 2)
+
+                # Phân loại chính xác loại phân vùng
+                is_boot = bool(p.get("IsBoot"))
+                is_esp = bool(p.get("IsSystem")) or raw_type in ("System", "EFI") or (p_size_gb < 2.0 and fs == "FAT32")
+
+                if is_esp:
+                    p_type = "EFI"
+                elif raw_type in ("Reserved", "MSR") or p_size_mb <= 128:
+                    p_type = "MSR"
+                elif "Recovery" in raw_type or "Recovery" in label or "WinRE" in label:
+                    p_type = "Recovery"
+                else:
+                    p_type = "Primary"
+
+                # is_system CHỈ ĐƯỢC TRUE nếu đây là phân vùng Windows OS (size >= 15GB và là ổ C: hoặc IsBoot)
+                is_cur_win = False
+                if not is_winpe():
+                    is_cur_win = (is_boot or letter == "C") and p_size_gb >= 15.0 and not is_esp
+                else:
+                    if letter and p_size_gb >= 15.0:
+                        import os
+                        is_cur_win = os.path.exists(f"{letter}:\\Windows\\System32")
 
                 part = Partition(
                     index=p.get("PartitionNumber", 0),
@@ -169,7 +193,7 @@ def _get_disks_via_powershell() -> List[Disk]:
                     free_gb=free_gb,
                     fs=fs,
                     type=p_type,
-                    is_system=bool(p.get("IsSystem")),
+                    is_system=is_cur_win,
                     is_active=bool(p.get("IsActive")),
                     bitlocker_status="Unknown",
                     raw_size_mb=p_size_mb,
@@ -239,15 +263,17 @@ def _get_disks_via_cim() -> List[Disk]:
                     continue
                 v_size = int(v.get("Size") or 0)
                 v_free = int(v.get("FreeSpace") or 0)
+                v_size_gb = round(v_size / (1024**3), 2)
+                v_fs = v.get("FileSystem") or "NTFS"
                 part = Partition(
                     index=len(disk.partitions) + 1,
                     letter=ltr,
                     label=v.get("VolumeName") or "",
-                    size_gb=round(v_size / (1024**3), 2),
+                    size_gb=v_size_gb,
                     free_gb=round(v_free / (1024**3), 2),
-                    fs=v.get("FileSystem") or "NTFS",
-                    type="Primary",
-                    is_system=(ltr == "C"),
+                    fs=v_fs,
+                    type="EFI" if (v_size_gb < 2.0 and v_fs == "FAT32") else "Primary",
+                    is_system=(ltr == "C" and v_size_gb >= 15.0),
                     is_active=False,
                     bitlocker_status="Unknown",
                     raw_size_mb=v_size // (1024**2),
@@ -330,6 +356,16 @@ def _get_disks_via_diskpart() -> List[Disk]:
                 else:
                     v_gb = val
 
+                is_esp = ("system" in info or "efi" in info or (v_gb < 2.0 and fs == "FAT32"))
+                if is_esp:
+                    p_type = "EFI"
+                elif "recovery" in info or "recovery" in label.lower():
+                    p_type = "Recovery"
+                else:
+                    p_type = "Primary"
+
+                is_cur_win = ("boot" in info or ltr == "C") and v_gb >= 15.0 and not is_esp
+
                 part = Partition(
                     index=int(vm.group(1)),
                     letter=ltr,
@@ -337,8 +373,8 @@ def _get_disks_via_diskpart() -> List[Disk]:
                     size_gb=round(v_gb, 2),
                     free_gb=0.0,
                     fs=fs,
-                    type="EFI" if "system" in info else "Primary",
-                    is_system=("system" in info or "boot" in info),
+                    type=p_type,
+                    is_system=is_cur_win,
                     is_active=False,
                     bitlocker_status="Unknown",
                     raw_size_mb=int(v_gb * 1024),

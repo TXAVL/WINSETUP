@@ -3,14 +3,15 @@ release_date: "2026-10-25"
 repository: "TXAVL/WINSETUP"
 channel: "stable"
 setup_name: "TXAWinSetup_Setup.exe"
-setup_size: 16424839
-setup_sha256: "E6FB23DAACE7564E03901E34F56C6F8F670DE9CCB5AD8D4AEDCF0FA79F35CD6C"
+setup_size: 16428896
+setup_sha256: "9B7DA757BA29CF1D50C5201130705C278F56D69D15806139562745720799D913"
 setup_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Setup.exe"
 portable_name: "TXAWinSetup_Portable.exe"
-portable_size: 16550683
-portable_sha256: "3494B64C45060A6F52373580304F5649E3A5BFEC82F1EE7CD4F4F1068206423F"
+portable_size: 16555385
+portable_sha256: "C2FD2AAE0FA20D2C735169CF3D2B2FF19A4F4C1DECA3F2D8DB5E7EE61302AF71"
 portable_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Portable.exe"
 changelog: |
+    • Khắc phục triệt để lỗi nhận diện nhầm phân vùng boot EFI (0.2 GB) thành phân vùng Windows đang chạy: Bổ sung bộ lọc dung lượng và phân loại chuẩn xác (EFI Boot, MSR, Recovery), tự động chọn đúng phân vùng Windows OS (ổ C:) và ngăn chặn tuyệt đối việc cài đặt nhầm vào phân vùng hệ thống nhỏ.
     • Đột phá toàn diện giao diện người dùng (Cyber Obsidian UI 2.0): Nâng cấp bảng màu Obsidian & Sunset Orange độ tương phản cao, phong cách hiện đại chống mỏi mắt.
     • Thiết kế thanh điều hướng Tab dạng Segmented Pill: Hiệu ứng chuyển động mượt mà, phân tách rõ ràng từng giai đoạn cấu hình.
     • Thanh hiển thị dung lượng phân vùng trực quan (Mini Capacity Bar): Trực tiếp xem dung lượng đã dùng, còn trống và định dạng ổ đĩa tương tự Windows Explorer.
