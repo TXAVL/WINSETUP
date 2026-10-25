@@ -232,6 +232,37 @@ def write_unattend(
         log_cb(progress, f"[WARN] Không copy được tool: {e}", 89)
         tool_dest = Path(tool_exe_path)
 
+    # Copy Avatar người dùng mặc định và OEM Logo của TXA Studio
+    try:
+        def get_asset_path(filename: str):
+            if hasattr(sys, "_MEIPASS"):
+                p = Path(sys._MEIPASS) / "assets" / filename
+                if p.exists():
+                    return p
+            candidates = [
+                Path(__file__).resolve().parent.parent / "assets" / filename,
+                Path.cwd() / "assets" / filename,
+            ]
+            for c in candidates:
+                if c.exists():
+                    return c
+            return None
+
+        user_pics_dir = Path(f"{windows_drive}:\\ProgramData\\Microsoft\\User Account Pictures")
+        user_pics_dir.mkdir(parents=True, exist_ok=True)
+        for pic in ("user.png", "user.bmp", "user-192.png", "user-48.png", "user-40.png", "user-32.png", "guest.png", "guest.bmp"):
+            src = get_asset_path(pic)
+            if src and src.is_file():
+                shutil.copy2(src, user_pics_dir / pic)
+
+        oem_src = get_asset_path("oemlogo.bmp")
+        if oem_src and oem_src.is_file():
+            sys32 = Path(f"{windows_drive}:\\Windows\\System32")
+            sys32.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(oem_src, sys32 / "oemlogo.bmp")
+    except Exception as e:
+        log_cb(progress, f"[WARN] Thiết lập avatar mặc định: {e}", 89)
+
     runonce_cmd = f'"{tool_dest}" --phase3'
 
     custom_unattend = config.get("custom_unattend_path", "")
@@ -247,7 +278,7 @@ def write_unattend(
         xml = gen_unattend(
             username=config.get("username", "User"),
             password=config.get("password", ""),
-            computer_name=config.get("computer_name", "TXA-PC"),
+            computer_name=config.get("computer_name", "TXA-WIN"),
             timezone=config.get("timezone", "SE Asia Standard Time"),
             product_key=config.get("product_key", ""),
             bypass_tpm=config.get("bypass_tpm", True),
@@ -279,6 +310,7 @@ def write_unattend(
     setup_cmd_content = generate_setup_complete(
         username=config.get("username", "User"),
         password=config.get("password", ""),
+        computer_name=config.get("computer_name", "TXA-WIN"),
         classic_context_menu=config.get("classic_context_menu", True),
         disable_bitlocker=config.get("disable_bitlocker", True),
         disable_telemetry=config.get("disable_telemetry", True),

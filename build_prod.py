@@ -102,7 +102,7 @@ def calc_sha256(filepath):
 setup_size, setup_hash = calc_sha256(PROD_DIR / "TXAWinSetup_Setup.exe")
 port_size, port_hash = calc_sha256(PROD_DIR / "TXAWinSetup_Portable.exe")
 
-latest_yml_content = f"""version: "1.3.0"
+latest_yml_content = f"""version: "1.4.0"
 release_date: "2026-10-25"
 repository: "TXAVL/WINSETUP"
 channel: "stable"
@@ -115,12 +115,15 @@ portable_size: {port_size}
 portable_sha256: "{port_hash}"
 portable_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Portable.exe"
 changelog: |
-  • Nâng cấp giao diện trực quan chọn Phân vùng (Partition-first): Người dùng trực tiếp chọn phân vùng muốn cài Windows (C:\, D:\...), bảo toàn 100% dữ liệu các phân vùng khác.
-  • Hỗ trợ hộp chọn Combobox thả xuống hiển thị chi tiết mọi phiên bản Windows (Home, Pro, Enterprise, Education,...) trong file ISO/WIM/ESD.
+  • Nâng cấp phiên bản TXA WinSetup v1.4.0.
+  • Tự động thiết lập mô tả hệ thống Windows: "Win 11 create by TXA Studio, date: [Ngày chạy tool]. Version: [Version]".
+  • Đổi tên máy tính mặc định (Computer Name) thành TXA-WIN.
+  • Tích hợp bộ Avatar người dùng và OEM Logo TXA Studio, tự động áp dụng avatar mặc định cho tài khoản Windows.
+  • Nâng cấp giao diện trực quan chọn Phân vùng (Partition-first): Người dùng trực tiếp chọn phân vùng muốn cài Windows, bảo toàn 100% dữ liệu các phân vùng khác.
+  • Hỗ trợ hộp chọn Combobox thả xuống hiển thị chi tiết mọi phiên bản Windows trong file ISO/WIM/ESD.
   • Đảm bảo tương thích tuyệt đối với Windows 11 Canary / Insider Preview 29695.1001 (tự động tạo tài khoản Local Admin và bypass OOBE).
   • Khắc phục hoàn toàn lỗi kẹt/đơ chuyển tab khi vào tab Tiến trình & Logs rồi bấm quay lại các tab khác.
   • Nâng cấp cửa sổ cập nhật: Hiển thị đầy đủ changelog nội dung mới khi có bản update, giữ nguyên thông báo phiên bản ổn định khi đang ở bản mới nhất.
-  • Tối ưu tốc độ tải và kiểm tra phân vùng ổ đĩa (Diskpart & WMI).
 """
 for yml_path in [BASE_DIR / "latest.yml", PROD_DIR / "latest.yml"]:
     with open(yml_path, "w", encoding="utf-8") as f:

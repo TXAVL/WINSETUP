@@ -95,7 +95,7 @@ class TXAWinSetup(tk.Tk):
             # Tùy chọn người dùng & bảo mật
             "username": curr_user,
             "password": "",
-            "computer_name": "TXA-PC",
+            "computer_name": "TXA-WIN",
             "product_key": "",
             "bypass_tpm": True,
             "skip_ms_account": True,
@@ -1010,8 +1010,8 @@ class TXAWinSetup(tk.Tk):
         r_pc = tk.Frame(card_pc, bg=COLORS["bg_card"])
         r_pc.pack(fill="x", pady=4)
         TXALabel(r_pc, "Tên máy tính (PC Name): ", style="body", bg=COLORS["bg_card"]).pack(side="left")
-        self._pcname_e = TXAEntry(r_pc, placeholder="TXA-PC", width=22)
-        self._pcname_e.insert(0, self._config.get("computer_name", "TXA-PC"))
+        self._pcname_e = TXAEntry(r_pc, placeholder="TXA-WIN", width=22)
+        self._pcname_e.insert(0, self._config.get("computer_name", "TXA-WIN"))
         self._pcname_e.pack(side="left", padx=6)
 
         r_key = tk.Frame(card_pc, bg=COLORS["bg_card"])
@@ -1358,7 +1358,7 @@ class TXAWinSetup(tk.Tk):
             if hasattr(self, '_pcname_e'):
                 try:
                     if self._pcname_e.winfo_exists():
-                        self._config["computer_name"] = self._pcname_e.get().strip() or "TXA-PC"
+                        self._config["computer_name"] = self._pcname_e.get().strip() or "TXA-WIN"
                 except Exception:
                     pass
             if hasattr(self, '_key_e'):

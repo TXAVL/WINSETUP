@@ -36,6 +36,9 @@ TPM_BYPASS_REG = """
 </RunSynchronousCommand>
 """
 
+import datetime
+from .updater import APP_VERSION
+
 def generate_setup_complete(
     username: str = "Admin",
     password: str = "",
@@ -47,8 +50,15 @@ def generate_setup_complete(
     high_performance_power: bool = True,
     auto_activate: bool = True,
     product_key: str = "",
+    tool_version: str = APP_VERSION,
+    run_date: str = "",
+    computer_name: str = "TXA-WIN",
 ) -> str:
     """Tạo nội dung SetupComplete.cmd để chạy ngầm tinh chỉnh sau khi cài xong."""
+    if not run_date:
+        run_date = datetime.datetime.now().strftime("%Y-%m-%d")
+    desc = f"Win 11 create by TXA Studio, date: {run_date}. Version: {tool_version}"
+
     cmds = ["@echo off", "chcp 65001 >nul", ":: TXA WinSetup - Post Install Tweaks"]
 
     # Đảm bảo tài khoản Local Admin luôn tồn tại và hoạt động kể cả trên Win 11 Insider Preview 29695+
@@ -62,6 +72,21 @@ def generate_setup_complete(
         cmds.append('reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\OOBE" /v HideOnlineAccountScreens /t REG_DWORD /d 1 /f >nul 2>&1')
         cmds.append('reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\OOBE" /v NetworkRequestStatus /t REG_DWORD /d 0 /f >nul 2>&1')
         cmds.append('reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\OOBE" /v ProtectYourPC /t REG_DWORD /d 3 /f >nul 2>&1')
+
+    # Thiết lập OEM Information & mô tả hệ thống theo yêu cầu TXA Studio
+    cmds.append(":: [TXA] Thiet lap OEM Information & Mo ta he thong")
+    cmds.append('reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\OEMInformation" /v Manufacturer /t REG_SZ /d "TXA Studio" /f >nul 2>&1')
+    cmds.append(f'reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\OEMInformation" /v Model /t REG_SZ /d "{desc}" /f >nul 2>&1')
+    cmds.append('reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\OEMInformation" /v SupportURL /t REG_SZ /d "https://github.com/TXAVL/WINSETUP" /f >nul 2>&1')
+    cmds.append('reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\OEMInformation" /v SupportHours /t REG_SZ /d "24/7" /f >nul 2>&1')
+    cmds.append('if exist "%windir%\\system32\\oemlogo.bmp" (')
+    cmds.append('    reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\OEMInformation" /v Logo /t REG_SZ /d "%windir%\\system32\\oemlogo.bmp" /f >nul 2>&1')
+    cmds.append(')')
+    cmds.append(f'reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters" /v srvcomment /t REG_SZ /d "{desc}" /f >nul 2>&1')
+
+    # Bật chính sách áp dụng avatar mặc định cho tài khoản
+    cmds.append(":: [TXA] Ap dung Avatar mac dinh TXA")
+    cmds.append('reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer" /v UseDefaultTile /t REG_DWORD /d 1 /f >nul 2>&1')
 
 
     if disable_bitlocker:
@@ -110,7 +135,7 @@ def generate_setup_complete(
 def generate(
     username: str,
     password: str,
-    computer_name: str,
+    computer_name: str = "TXA-WIN",
     timezone: str = "SE Asia Standard Time",
     language: str = "en-US",
     product_key: str = "",
@@ -118,11 +143,17 @@ def generate(
     auto_logon: bool = True,
     runonce_cmd: str = "",
     output_path: str = "",
+    tool_version: str = APP_VERSION,
+    run_date: str = "",
 ) -> str:
     """
     Tạo unattend.xml hoàn chỉnh.
     Trả về nội dung XML dạng string.
     """
+    if not run_date:
+        run_date = datetime.datetime.now().strftime("%Y-%m-%d")
+    desc = f"Win 11 create by TXA Studio, date: {run_date}. Version: {tool_version}"
+
     # Escape XML special chars
     def xe(s): return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace('"',"&quot;")
 
@@ -249,7 +280,7 @@ def generate(
               <Value>{xe(password)}</Value>
               <PlainText>true</PlainText>
             </Password>
-            <Description>TXA Setup Account</Description>
+            <Description>{xe(desc)}</Description>
             <DisplayName>{xe(username)}</DisplayName>
             <Group>Administrators</Group>
             <Name>{xe(username)}</Name>
