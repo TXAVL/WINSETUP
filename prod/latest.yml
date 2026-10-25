@@ -3,12 +3,12 @@ release_date: "2026-10-25"
 repository: "TXAVL/WINSETUP"
 channel: "stable"
 setup_name: "TXAWinSetup_Setup.exe"
-setup_size: 16430728
-setup_sha256: "D8CB2EC4072942F1E9A3460F7F7EC01383AED19AAD463C5E59FC095B801FE544"
+setup_size: 16459274
+setup_sha256: "6AF75E112BFE806B8768CE971C056D961B28340CB866145DC00B54EDD33849A2"
 setup_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Setup.exe"
 portable_name: "TXAWinSetup_Portable.exe"
-portable_size: 16556408
-portable_sha256: "6EA479BA8B94F4B08B92B26CAFEBC573B4F7BB64F17346F661077318E13CBC41"
+portable_size: 16585253
+portable_sha256: "C47B0652818BBE4561EF3051F8134E0C4866D7C737B6BB9B876DD56865A20CA4"
 portable_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Portable.exe"
 changelog: |
     • Khắc phục triệt để lỗi nhận diện nhầm phân vùng boot EFI (0.2 GB) thành phân vùng Windows đang chạy: Bổ sung bộ lọc dung lượng và phân loại chuẩn xác (EFI Boot, MSR, Recovery), tự động chọn đúng phân vùng Windows OS (ổ C:) và ngăn chặn tuyệt đối việc cài đặt nhầm vào phân vùng hệ thống nhỏ.

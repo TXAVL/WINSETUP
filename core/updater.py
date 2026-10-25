@@ -260,9 +260,11 @@ def download_file_resumable(
             progress_callback(downloaded, total_bytes, 0.0, f"Đang kết nối tới máy chủ GitHub{mode_desc}...")
 
         req = urllib.request.Request(url, headers=headers)
+        import ssl
+        ctx = ssl.create_default_context()
         resp = None
         try:
-            resp = urllib.request.urlopen(req, timeout=15)
+            resp = urllib.request.urlopen(req, timeout=20, context=ctx)
         except urllib.error.HTTPError as he:
             if he.code == 416: # Range Not Satisfiable (đã tải xong toàn bộ trong file .part)
                 if expected_sha256 and check_sha256(part_path, expected_sha256):
@@ -273,16 +275,40 @@ def download_file_resumable(
                     except Exception as e:
                         return False, f"Không thể lưu file tải về: {e}"
                     return True, dest_path
-                # Nếu không khớp thì xóa file part và tải lại từ đầu
                 try:
                     os.remove(part_path)
                 except Exception:
                     pass
                 downloaded = 0
                 req = urllib.request.Request(url, headers={"User-Agent": headers["User-Agent"]})
-                resp = urllib.request.urlopen(req, timeout=15)
+                resp = urllib.request.urlopen(req, timeout=20, context=ctx)
             else:
                 return False, f"Máy chủ phản hồi lỗi HTTP {he.code}: {he.reason}"
+        except Exception:
+            # Fallback nếu máy client/WinPE thiếu chứng chỉ SSL gốc
+            try:
+                ctx_insecure = ssl._create_unverified_context()
+                resp = urllib.request.urlopen(req, timeout=25, context=ctx_insecure)
+            except urllib.error.HTTPError as he2:
+                if he2.code == 416:
+                    if expected_sha256 and check_sha256(part_path, expected_sha256):
+                        try:
+                            if os.path.exists(dest_path):
+                                os.remove(dest_path)
+                            os.rename(part_path, dest_path)
+                        except Exception as e:
+                            return False, f"Không thể lưu file: {e}"
+                        return True, dest_path
+                    try:
+                        os.remove(part_path)
+                    except Exception:
+                        pass
+                    req = urllib.request.Request(url, headers={"User-Agent": headers["User-Agent"]})
+                    resp = urllib.request.urlopen(req, timeout=25, context=ctx_insecure)
+                else:
+                    return False, f"Lỗi tải HTTP {he2.code}: {he2.reason}"
+            except Exception as e_final:
+                return False, f"Không thể kết nối đến máy chủ tải: {e_final}"
 
         status_code = getattr(resp, "status", getattr(resp, "code", 200))
         content_range = resp.headers.get("Content-Range")
