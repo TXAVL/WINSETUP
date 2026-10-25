@@ -133,6 +133,8 @@ class TXAWinSetup(tk.Tk):
         else:
             if self.state.load():
                 self._ask_resume()
+            # Tự động kiểm tra bản cập nhật khi khởi động (nếu được bật)
+            self.after(2500, self._auto_check_update_on_startup)
 
     # ── Giao diện chính ──────────────────────────────────────────────
 
@@ -1612,29 +1614,182 @@ class TXAWinSetup(tk.Tk):
             pass
         self.destroy()
 
-    def _on_check_update_click(self):
-        """Kích hoạt kiểm tra phiên bản mới từ GitHub Release latest.yml."""
-        self._btn_check_update.config(text="Đang kiểm tra...", state="disabled")
-        from core.updater import check_update_async
-        def on_result(res):
-            self.after(0, lambda: self._show_update_dialog(res))
-        check_update_async(on_result)
+    def _auto_check_update_on_startup(self):
+        """Tự động kiểm tra bản cập nhật trên luồng ngầm khi khởi động ứng dụng."""
+        try:
+            from core.updater import is_auto_check_enabled, check_update_async
+            if not is_auto_check_enabled():
+                return
+            def on_result(res):
+                self.after(0, lambda: self._handle_startup_update_result(res))
+            check_update_async(on_result)
+        except Exception:
+            pass
 
-    def _show_update_dialog(self, res):
-        """Hiển thị hộp thoại kết quả kiểm tra cập nhật."""
-        self._btn_check_update.config(text="⟳ Cập nhật", state="normal")
-        if not res.get("success"):
-            messagebox.showinfo("Cập nhật phần mềm", f"Không thể kiểm tra cập nhật:\n{res.get('error', 'Lỗi kết nối')}")
-            return
+    def _handle_startup_update_result(self, res):
+        """Xử lý kết quả kiểm tra cập nhật tự động khi khởi động."""
         if res.get("has_update"):
             ver = res.get("latest_version")
-            cl = res.get("changelog", "")
-            msg = f"Đã có phiên bản mới: TXA WinSetup v{ver}!\n(Phiên bản bạn đang dùng: v{res.get('current_version')})\n\n"
-            if cl:
-                msg += f"Nội dung cập nhật:\n{cl}\n\n"
-            msg += "Bạn có muốn mở trang tải bản cập nhật trên GitHub ngay bây giờ không?"
-            if messagebox.askyesno("Đã có bản cập nhật mới!", msg):
-                import webbrowser
-                webbrowser.open(res.get("releases_page", "https://github.com/TXAVL/WINSETUP/releases"))
+            self._btn_check_update.config(
+                text=f"⚡ Có bản v{ver} mới!",
+                bg=COLORS["success"],
+                fg="#0D0D0D",
+                font=FONTS["brand"]
+            )
+
+    def _on_check_update_click(self):
+        """Mở cửa sổ chi tiết cập nhật ứng dụng và tùy chọn bật/tắt tự động cập nhật."""
+        self._open_update_window()
+
+    def _open_update_window(self, pre_result=None):
+        """Mở giao diện tương tác kiểm tra cập nhật, xem changelog và bật/tắt tùy chọn."""
+        from core.updater import is_auto_check_enabled, set_auto_check_enabled, check_update_async, APP_VERSION
+        import webbrowser
+
+        win = tk.Toplevel(self)
+        win.title("Cập nhật phần mềm — TXA WinSetup")
+        win.configure(bg=COLORS["bg_dark"])
+        win.geometry("540x480")
+        win.resizable(False, False)
+        win.transient(self)
+        win.grab_set()
+
+        # Căn giữa so với cửa sổ cha
+        try:
+            win.update_idletasks()
+            px, py = self.winfo_x(), self.winfo_y()
+            pw, ph = self.winfo_width(), self.winfo_height()
+            x = px + max(0, (pw - 540) // 2)
+            y = py + max(0, (ph - 480) // 2)
+            win.geometry(f"540x480+{x}+{y}")
+        except Exception:
+            pass
+
+        # Header
+        hdr = tk.Frame(win, bg=COLORS["bg_panel"], padx=18, pady=14)
+        hdr.pack(fill="x")
+        tk.Label(hdr, text="TXA WinSetup — Trình Cập Nhật", bg=COLORS["bg_panel"],
+                 fg=COLORS["text_primary"], font=FONTS["heading"]).pack(anchor="w")
+        tk.Label(hdr, text=f"Phiên bản hiện tại: v{APP_VERSION} (Stable)", bg=COLORS["bg_panel"],
+                 fg=COLORS["text_secondary"], font=FONTS["small"]).pack(anchor="w", pady=(2, 0))
+
+        content = tk.Frame(win, bg=COLORS["bg_dark"], padx=18, pady=14)
+        content.pack(fill="both", expand=True)
+
+        # Status row
+        status_lbl = tk.Label(content, text="● Đang kiểm tra phiên bản mới từ GitHub...",
+                              bg=COLORS["bg_dark"], fg=COLORS["info"], font=FONTS["body"])
+        status_lbl.pack(anchor="w", pady=(0, 10))
+
+        # Changelog / Info text box
+        txt_box = tk.Text(content, bg=COLORS["bg_input"], fg=COLORS["text_primary"],
+                          font=FONTS["small"], relief="flat", height=8, wrap="word",
+                          highlightthickness=1, highlightbackground=COLORS["border"])
+        txt_box.pack(fill="both", expand=True, pady=(0, 12))
+        txt_box.insert("1.0", "Đang nạp dữ liệu từ máy chủ...")
+        txt_box.config(state="disabled")
+
+        # Action buttons frame (download setup / portable)
+        btn_action_frame = tk.Frame(content, bg=COLORS["bg_dark"])
+        btn_action_frame.pack(fill="x", pady=(0, 12))
+
+        # Checkbox Tự động kiểm tra bản cập nhật
+        cfg_frame = tk.Frame(content, bg=COLORS["bg_dark"])
+        cfg_frame.pack(fill="x", pady=(0, 8))
+
+        auto_var = tk.BooleanVar(value=is_auto_check_enabled())
+        def on_toggle_auto():
+            set_auto_check_enabled(auto_var.get())
+            cfg_tip.config(text="✓ Đã bật tự động kiểm tra!" if auto_var.get() else "✓ Đã tắt tự động kiểm tra!")
+            self.after(2500, lambda: cfg_tip.config(text=""))
+
+        chk = tk.Checkbutton(
+            cfg_frame,
+            text="Tự động kiểm tra bản cập nhật mới khi mở ứng dụng",
+            variable=auto_var,
+            command=on_toggle_auto,
+            bg=COLORS["bg_dark"],
+            fg=COLORS["text_primary"],
+            selectcolor=COLORS["bg_panel"],
+            activebackground=COLORS["bg_dark"],
+            activeforeground=COLORS["accent"],
+            font=FONTS["small"],
+            cursor="hand2"
+        )
+        chk.pack(side="left")
+
+        cfg_tip = tk.Label(cfg_frame, text="", bg=COLORS["bg_dark"], fg=COLORS["success"], font=FONTS["small"])
+        cfg_tip.pack(side="left", padx=8)
+
+        # Bottom buttons
+        bottom = tk.Frame(win, bg=COLORS["bg_panel"], padx=18, pady=10)
+        bottom.pack(fill="x", side="bottom")
+
+        close_btn = tk.Button(bottom, text="Đóng", bg=COLORS["bg_card"], fg=COLORS["text_secondary"],
+                              relief="flat", padx=14, pady=4, cursor="hand2", command=win.destroy)
+        close_btn.pack(side="right")
+
+        recheck_btn = tk.Button(bottom, text="⟳ Kiểm tra lại", bg=COLORS["bg_card"], fg=COLORS["accent"],
+                                relief="flat", padx=14, pady=4, cursor="hand2")
+        recheck_btn.pack(side="right", padx=8)
+
+        def apply_result(res):
+            for w in btn_action_frame.winfo_children():
+                w.destroy()
+            txt_box.config(state="normal")
+            txt_box.delete("1.0", "end")
+
+            if not res.get("success"):
+                status_lbl.config(text="❌ Không thể kết nối tới máy chủ cập nhật", fg=COLORS["error"])
+                txt_box.insert("1.0", f"Lỗi: {res.get('error', 'Không có kết nối mạng hoặc GitHub không phản hồi.')}")
+            elif res.get("has_update"):
+                latest_v = res.get("latest_version")
+                r_date = res.get("release_date", "")
+                status_lbl.config(text=f"✨ Có phiên bản mới: v{latest_v} ({r_date})", fg=COLORS["success"])
+                cl = res.get("changelog", "Không có thông tin chi tiết.")
+                txt_box.insert("1.0", f"--- NỘI DUNG PHIÊN BẢN v{latest_v} ---\n{cl}")
+
+                s_url = res.get("setup_url")
+                if s_url:
+                    tk.Button(
+                        btn_action_frame, text="📥 Tải bộ cài Setup (.exe)",
+                        bg=COLORS["accent"], fg="#FFFFFF", font=FONTS["small"],
+                        relief="flat", padx=10, pady=4, cursor="hand2",
+                        command=lambda u=s_url: webbrowser.open(u)
+                    ).pack(side="left", padx=(0, 8))
+
+                p_url = res.get("portable_url")
+                if p_url:
+                    tk.Button(
+                        btn_action_frame, text="📦 Tải Portable (.exe)",
+                        bg=COLORS["bg_card"], fg=COLORS["text_primary"], font=FONTS["small"],
+                        relief="flat", padx=10, pady=4, cursor="hand2",
+                        command=lambda u=p_url: webbrowser.open(u)
+                    ).pack(side="left", padx=(0, 8))
+
+                gh_url = res.get("releases_page")
+                if gh_url:
+                    tk.Button(
+                        btn_action_frame, text="🌐 GitHub Release",
+                        bg=COLORS["bg_card"], fg=COLORS["text_secondary"], font=FONTS["small"],
+                        relief="flat", padx=10, pady=4, cursor="hand2",
+                        command=lambda u=gh_url: webbrowser.open(u)
+                    ).pack(side="left")
+            else:
+                status_lbl.config(text=f"✅ Bạn đang sử dụng phiên bản mới nhất: v{APP_VERSION}", fg=COLORS["success"])
+                txt_box.insert("1.0", "Không có bản cập nhật nào mới hơn trên GitHub.\n\nTXA WinSetup hiện tại là bản cập nhật chuẩn nhất và ổn định.")
+
+            txt_box.config(state="disabled")
+            recheck_btn.config(state="normal", text="⟳ Kiểm tra lại")
+
+        def run_check():
+            status_lbl.config(text="● Đang kiểm tra phiên bản mới từ GitHub...", fg=COLORS["info"])
+            recheck_btn.config(state="disabled", text="Đang kiểm tra...")
+            check_update_async(lambda res: win.after(0, lambda: apply_result(res)))
+
+        recheck_btn.config(command=run_check)
+
+        if pre_result:
+            apply_result(pre_result)
         else:
-            messagebox.showinfo("Kiểm tra cập nhật", f"Bạn đang sử dụng phiên bản mới nhất: v{res.get('current_version')} (Mới nhất).")
+            run_check()

@@ -22,6 +22,7 @@ SetCompressor /SOLID lzma
 !include "WordFunc.nsh"
 !include "FileFunc.nsh"
 !include "LogicLib.nsh"
+!include "Sections.nsh"
 
 ; ── MUI Settings ──
 !define MUI_ABORTWARNING
@@ -148,6 +149,12 @@ LangString SEC_NAME_STARTUP ${LANG_ENGLISH} "Start with Windows"
 
 LangString DESC_STARTUP ${LANG_VIETNAMESE} "Tự động chạy ứng dụng TXA WinSetup khi khởi động Windows."
 LangString DESC_STARTUP ${LANG_ENGLISH} "Automatically launch TXA WinSetup on Windows startup."
+
+LangString SEC_NAME_AUTOUPDATE ${LANG_VIETNAMESE} "Tự động kiểm tra bản cập nhật mới"
+LangString SEC_NAME_AUTOUPDATE ${LANG_ENGLISH} "Automatically check for updates"
+
+LangString DESC_AUTOUPDATE ${LANG_VIETNAMESE} "Tự động kiểm tra phiên bản mới từ GitHub khi mở ứng dụng TXA WinSetup (Khuyên dùng)."
+LangString DESC_AUTOUPDATE ${LANG_ENGLISH} "Automatically check for new releases on GitHub upon opening TXA WinSetup (Recommended)."
 
 LangString UNINST_CLEAN_DATA ${LANG_VIETNAMESE} "Bạn có muốn xóa sạch toàn bộ cấu hình, lịch sử nhật ký (log) và các file tạm của TXA WinSetup không?"
 LangString UNINST_CLEAN_DATA ${LANG_ENGLISH} "Would you like to completely delete all configuration history, log files, and temporary data created by TXA WinSetup?"
@@ -345,6 +352,10 @@ Section /o "$(SEC_NAME_STARTUP)" SEC_STARTUP
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "TXAWinSetup" '"$INSTDIR\TXAWinSetup.exe"'
 SectionEnd
 
+Section "$(SEC_NAME_AUTOUPDATE)" SEC_AUTOUPDATE
+  ; Tự động kiểm tra bản cập nhật (Tích chọn sẵn theo mặc định)
+SectionEnd
+
 ; ── Ghi nhận Registry sau khi cài ──
 Section -Post
   WriteUninstaller "$INSTDIR\Uninstall.exe"
@@ -360,6 +371,14 @@ Section -Post
   WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "NoModify" 1
   WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "NoRepair" 0
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "HelpLink" "${PRODUCT_WEB_SITE}"
+
+  ; Thiết lập tùy chọn Tự động kiểm tra bản cập nhật
+  ${If} ${SectionIsSelected} ${SEC_AUTOUPDATE}
+    WriteRegDWORD HKCU "Software\TXA Studio\TXA WinSetup" "AutoCheckUpdate" 1
+  ${Else}
+    WriteRegDWORD HKCU "Software\TXA Studio\TXA WinSetup" "AutoCheckUpdate" 0
+  ${EndIf}
+
   !insertmacro MUI_LANGDLL_SAVELANGUAGE
 SectionEnd
 
@@ -370,6 +389,7 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_STARTMENU} $(DESC_STARTMENU)
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_CONTEXT} $(DESC_CONTEXT)
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_STARTUP} $(DESC_STARTUP)
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_AUTOUPDATE} $(DESC_AUTOUPDATE)
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ; ── Uninstaller ──

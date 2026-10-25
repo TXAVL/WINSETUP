@@ -3,12 +3,12 @@ release_date: "2026-10-25"
 repository: "TXAVL/WINSETUP"
 channel: "stable"
 setup_name: "TXAWinSetup_Setup.exe"
-setup_size: 15966856
-setup_sha256: "5B8711CD645458261D5DAA52FBD38B293A0B0DDCD1786D936B3F5E6FFB313943"
+setup_size: 15972422
+setup_sha256: "93F75B60097B3DFF230EFE150B07EB07983EE6C417F7E6B4C0EC2C2020C3B556"
 setup_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Setup.exe"
 portable_name: "TXAWinSetup_Portable.exe"
-portable_size: 15771621
-portable_sha256: "CAFD92FAF086B76B2B2F85FAB6DFB590231157B496936A0EE3A21EB0E0C90CD1"
+portable_size: 15777113
+portable_sha256: "6B955C567231958149814FC4992317B69A7C988B983FE38C160BFD253A807647"
 portable_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Portable.exe"
 changelog: |
   • Nâng cấp lên phiên bản ổn định TXA WinSetup v1.3.0.

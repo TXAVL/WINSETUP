@@ -177,3 +177,76 @@ def check_update_async(callback):
             pass
     t = threading.Thread(target=worker, daemon=True)
     t.start()
+
+REG_SUBKEY = r"Software\TXA Studio\TXA WinSetup"
+REG_VAL_AUTOCHECK = "AutoCheckUpdate"
+
+def _get_settings_file():
+    import os
+    from pathlib import Path
+    appdata = os.environ.get("LOCALAPPDATA")
+    if appdata:
+        p = Path(appdata) / "TXAWinSetup" / "settings.json"
+    else:
+        p = Path(__file__).resolve().parent.parent / "settings.json"
+    return p
+
+def is_auto_check_enabled() -> bool:
+    """Kiểm tra xem chế độ tự động kiểm tra cập nhật có bật không (mặc định bật)."""
+    # 1. Thử đọc từ Registry Windows
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, REG_SUBKEY, 0, winreg.KEY_READ) as key:
+            val, _ = winreg.QueryValueEx(key, REG_VAL_AUTOCHECK)
+            return bool(val)
+    except Exception:
+        pass
+
+    # 2. Thử đọc từ settings.json cục bộ
+    try:
+        import json
+        sf = _get_settings_file()
+        if sf.exists():
+            with open(sf, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if "auto_check_update" in data:
+                    return bool(data["auto_check_update"])
+    except Exception:
+        pass
+
+    # Mặc định là True (Bật)
+    return True
+
+def set_auto_check_enabled(enabled: bool) -> bool:
+    """Lưu cài đặt tự động kiểm tra cập nhật vào Registry và settings.json."""
+    saved = False
+    # 1. Ghi vào Registry Windows
+    try:
+        import winreg
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, REG_SUBKEY) as key:
+            winreg.SetValueEx(key, REG_VAL_AUTOCHECK, 0, winreg.REG_DWORD, 1 if enabled else 0)
+        saved = True
+    except Exception:
+        pass
+
+    # 2. Ghi vào settings.json cục bộ
+    try:
+        import json
+        sf = _get_settings_file()
+        sf.parent.mkdir(parents=True, exist_ok=True)
+        data = {}
+        if sf.exists():
+            try:
+                with open(sf, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception:
+                data = {}
+        data["auto_check_update"] = bool(enabled)
+        with open(sf, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        saved = True
+    except Exception:
+        pass
+
+    return saved
+
