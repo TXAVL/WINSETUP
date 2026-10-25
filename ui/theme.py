@@ -2,50 +2,55 @@
 TXA WinSetup — Design tokens & theme
 """
 
-# ── Màu sắc TXA ─────────────────────────────────────────────────────
+# ── Hệ thống màu sắc Cyber Obsidian UI 2.0 ───────────────────────────
 COLORS = {
-    # Nền
-    "bg_dark":       "#0D0D0D",
-    "bg_panel":      "#141414",
-    "bg_card":       "#1A1A1A",
-    "bg_input":      "#111111",
-    "bg_hover":      "#222222",
+    # Nền đa tầng Obsidian & Slate
+    "bg_dark":          "#0B0E14",   # Nền chính không gian sâu, chống mỏi mắt
+    "bg_panel":         "#111622",   # Nền thanh Header & Footer
+    "bg_card":          "#161D2B",   # Nền Card nội dung nổi bật
+    "bg_card_selected": "#1E283C",   # Nền Card khi được người dùng click chọn
+    "bg_input":         "#0D111A",   # Nền ô nhập liệu & Combobox
+    "bg_hover":         "#202A3D",   # Hiệu ứng rê chuột
 
-    # TXA accent — đỏ cam
-    "accent":        "#E8431A",
-    "accent_hover":  "#FF5530",
-    "accent_dim":    "#7A2310",
-    "accent_glow":   "#E8431A33",
+    # Điểm nhấn Electric Sunset Amber-Orange
+    "accent":           "#FF5500",   # Cam điện tử rực rỡ, hiện đại
+    "accent_hover":     "#FF6E26",   # Hover sáng rực
+    "accent_dim":       "#7A2800",   # Nền tối điểm nhấn
+    "accent_glow":      "#FF55002E", # Hào quang mờ xung quanh viền
+    "accent_blue":      "#38BDF8",   # Xanh Cyber Neon
+    "accent_purple":    "#A855F7",   # Tím Gradient
 
-    # Text
-    "text_primary":  "#F0F0F0",
-    "text_secondary":"#888888",
-    "text_muted":    "#444444",
-    "text_accent":   "#E8431A",
+    # Kiểu chữ tương phản cao
+    "text_primary":     "#F8FAFC",   # Trắng tinh khiết chuẩn Slate-50
+    "text_secondary":   "#94A3B8",   # Xám nhạt thanh lịch Slate-400
+    "text_muted":       "#64748B",   # Xám đậm ghi chú Slate-500
+    "text_accent":      "#FF6E26",   # Màu chữ cam nổi bật
 
-    # Status
-    "success":       "#22C55E",
-    "warning":       "#F59E0B",
-    "error":         "#EF4444",
-    "info":          "#3B82F6",
+    # Trạng thái hệ thống rực rỡ
+    "success":          "#10B981",   # Xanh ngọc lục bảo Emerald
+    "warning":          "#F59E0B",   # Vàng hổ phách Amber
+    "error":            "#F43F5E",   # Đỏ san hô rực rỡ Rose
+    "info":             "#0EA5E9",   # Xanh biển Sky Blue
 
-    # Border
-    "border":        "#2A2A2A",
-    "border_focus":  "#E8431A",
+    # Viền sắc nét tinh tế
+    "border":           "#222B3D",   # Đường viền 1px định hình khối
+    "border_card":      "#273347",   # Viền card nổi
+    "border_focus":     "#FF5500",   # Viền khi focus vào ô nhập
 }
 
 FONTS = {
-    "title":    ("Segoe UI", 22, "bold"),
-    "heading":  ("Segoe UI", 14, "bold"),
-    "subhead":  ("Segoe UI", 12, "bold"),
-    "body":     ("Segoe UI", 11),
-    "small":    ("Segoe UI", 10),
+    "title":    ("Segoe UI", 20, "bold"),
+    "heading":  ("Segoe UI", 13, "bold"),
+    "subhead":  ("Segoe UI", 11, "bold"),
+    "body":     ("Segoe UI", 10),
+    "small":    ("Segoe UI", 9),
+    "badge":    ("Segoe UI", 8, "bold"),
     "mono":     ("Consolas", 10),
-    "logo":     ("Segoe UI Black", 26, "bold"),
+    "logo":     ("Segoe UI Black", 22, "bold"),
     "brand":    ("Segoe UI", 11, "bold"),
 }
 
-RADIUS = 8   # Corner radius px
+RADIUS = 10  # Bo góc hiện đại mềm mại
 
 STEP_NAMES = [
     "Chọn ISO",

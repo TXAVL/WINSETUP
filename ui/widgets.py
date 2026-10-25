@@ -8,9 +8,15 @@ from .theme import COLORS, FONTS, RADIUS
 class TXAButton(tk.Canvas):
     def __init__(self, parent, text="", command=None, style="primary",
                  width=160, height=40, **kw):
+        parent_bg = kw.pop("bg", None)
+        if not parent_bg:
+            try:
+                parent_bg = parent.cget("bg")
+            except Exception:
+                parent_bg = COLORS["bg_card"]
         super().__init__(parent, width=width, height=height,
                          highlightthickness=0,
-                         bg=COLORS["bg_panel"], **kw)
+                         bg=parent_bg, **kw)
         self.command = command
         self.style = style
         self.text = text
@@ -18,28 +24,37 @@ class TXAButton(tk.Canvas):
         self.h = height
         self._hover = False
         self._disabled = False
+        self._parent_bg = parent_bg
         self._draw()
         self.bind("<Enter>", self._on_enter)
         self.bind("<Leave>", self._on_leave)
         self.bind("<Button-1>", self._on_click)
 
-    def _bg(self):
+    def _colors(self):
         if self._disabled:
-            return COLORS["text_muted"]
+            return COLORS["bg_hover"], COLORS["border"], COLORS["text_muted"]
         if self.style == "primary":
-            return COLORS["accent_hover"] if self._hover else COLORS["accent"]
+            bg = COLORS["accent_hover"] if self._hover else COLORS["accent"]
+            border = COLORS["accent_hover"] if self._hover else COLORS["accent"]
+            fg = "#FFFFFF"
+            return bg, border, fg
         if self.style == "ghost":
-            return COLORS["bg_hover"] if self._hover else COLORS["bg_card"]
+            bg = COLORS["bg_hover"] if self._hover else COLORS["bg_card"]
+            border = COLORS["border_focus"] if self._hover else COLORS["border_card"]
+            fg = COLORS["text_primary"]
+            return bg, border, fg
         if self.style == "danger":
-            return "#DC2626" if self._hover else "#B91C1C"
-        return COLORS["bg_card"]
+            bg = "#E11D48" if self._hover else "#BE123C"
+            border = "#FB7185" if self._hover else "#BE123C"
+            fg = "#FFFFFF"
+            return bg, border, fg
+        return COLORS["bg_card"], COLORS["border"], COLORS["text_primary"]
 
     def _draw(self):
         self.delete("all")
         r = RADIUS
-        bg = self._bg()
-        self._rounded_rect(2, 2, self.w-2, self.h-2, r, fill=bg, outline="")
-        fg = COLORS["text_muted"] if self._disabled else COLORS["text_primary"]
+        bg, border, fg = self._colors()
+        self._rounded_rect(2, 2, self.w-2, self.h-2, r, fill=bg, outline=border, width=1)
         self.create_text(
             self.w//2, self.h//2,
             text=self.text, fill=fg,
@@ -55,10 +70,16 @@ class TXAButton(tk.Canvas):
         self.create_rectangle(x1, y1+r, x2, y2-r, **kw)
 
     def _on_enter(self, _):
-        self._hover = True; self._draw()
+        if not self._disabled:
+            self._hover = True
+            self.config(cursor="hand2")
+            self._draw()
 
     def _on_leave(self, _):
-        self._hover = False; self._draw()
+        if not self._disabled:
+            self._hover = False
+            self.config(cursor="")
+            self._draw()
 
     def _on_click(self, _):
         if not self._disabled and self.command:
@@ -82,8 +103,7 @@ class TXACard(tk.Frame):
             padx=16, pady=12,
             **kw
         )
-        # Vẽ border giả bằng frame ngoài
-        self.configure(highlightbackground=COLORS["border"],
+        self.configure(highlightbackground=COLORS["border_card"],
                        highlightthickness=1)
 
 
@@ -203,10 +223,10 @@ class TXAStepper(tk.Frame):
 
 
 class TXATabBar(tk.Frame):
-    """Thanh Tabs hiện đại phong cách TXA Studio"""
+    """Thanh Tabs hiện đại phong cách Cyber Obsidian Segmented Pill"""
     def __init__(self, parent, tabs: list, on_change=None, current: int = 0, **kw):
         super().__init__(parent, bg=COLORS["bg_panel"], **kw)
-        self.tabs = tabs  # list of (label, icon) or strings
+        self.tabs = tabs
         self.on_change = on_change
         self.current = current
         self._buttons = []
@@ -218,7 +238,7 @@ class TXATabBar(tk.Frame):
         self._buttons = []
 
         bar_inner = tk.Frame(self, bg=COLORS["bg_panel"])
-        bar_inner.pack(fill="x", padx=16)
+        bar_inner.pack(fill="x", padx=16, pady=4)
 
         for i, item in enumerate(self.tabs):
             if isinstance(item, (list, tuple)):
@@ -227,33 +247,62 @@ class TXATabBar(tk.Frame):
                 label, icon = str(item), ""
 
             is_active = (i == self.current)
-            canvas = tk.Canvas(bar_inner, height=44, bg=COLORS["bg_panel"],
+            canvas = tk.Canvas(bar_inner, height=38, bg=COLORS["bg_panel"],
                                highlightthickness=0, cursor="hand2")
-            canvas.pack(side="left", padx=(0, 6), pady=(4, 0))
+            canvas.pack(side="left", padx=(0, 8), pady=2)
 
             self._render_tab(canvas, i, label, icon, is_active)
             canvas.bind("<Button-1>", lambda e, idx=i: self.set_current(idx))
+
+            def _bind_hover(c=canvas, idx=i, lbl=label, ic=icon):
+                def _enter(e):
+                    if idx != self.current:
+                        self._render_tab(c, idx, lbl, ic, False, is_hover=True)
+                def _leave(e):
+                    if idx != self.current:
+                        self._render_tab(c, idx, lbl, ic, False, is_hover=False)
+                c.bind("<Enter>", _enter)
+                c.bind("<Leave>", _leave)
+            _bind_hover()
+
             self._buttons.append((canvas, label, icon))
 
-    def _render_tab(self, canvas, idx, label, icon, is_active):
+    def _render_tab(self, canvas, idx, label, icon, is_active, is_hover=False):
         canvas.delete("all")
         text_str = f"{icon}  {label}".strip()
         font = FONTS["subhead"] if is_active else FONTS["body"]
-        w = max(150, len(text_str) * 8 + 36)
-        canvas.config(width=w)
+        w = max(148, len(text_str) * 8 + 32)
+        h = 36
+        canvas.config(width=w, height=h)
 
-        bg_col = COLORS["bg_card"] if is_active else COLORS["bg_panel"]
-        fg_col = COLORS["accent"] if is_active else COLORS["text_secondary"]
-
-        canvas.create_rectangle(0, 0, w, 44, fill=bg_col, outline="")
+        r = 8
         if is_active:
-            # Active bottom accent line
-            canvas.create_rectangle(0, 40, w, 44, fill=COLORS["accent"], outline="")
+            bg_col = COLORS["bg_card_selected"]
+            outline_col = COLORS["accent"]
+            fg_col = "#FFFFFF"
+        elif is_hover:
+            bg_col = COLORS["bg_hover"]
+            outline_col = COLORS["border_card"]
+            fg_col = COLORS["text_primary"]
         else:
-            # Subtle border
-            canvas.create_rectangle(0, 42, w, 44, fill=COLORS["border"], outline="")
+            bg_col = COLORS["bg_panel"]
+            outline_col = COLORS["border"]
+            fg_col = COLORS["text_secondary"]
 
-        canvas.create_text(w // 2, 21, text=text_str, fill=fg_col, font=font)
+        self._draw_pill(canvas, 1, 1, w - 2, h - 2, r, fill=bg_col, outline=outline_col, width=1)
+
+        if is_active:
+            canvas.create_rectangle(w//4, h - 3, w - w//4, h - 1, fill=COLORS["accent"], outline="")
+
+        canvas.create_text(w // 2, h // 2, text=text_str, fill=fg_col, font=font)
+
+    def _draw_pill(self, canvas, x1, y1, x2, y2, r, **kw):
+        canvas.create_arc(x1, y1, x1+2*r, y1+2*r, start=90,  extent=90,  **kw)
+        canvas.create_arc(x2-2*r, y1, x2, y1+2*r, start=0,   extent=90,  **kw)
+        canvas.create_arc(x1, y2-2*r, x1+2*r, y2, start=180, extent=90,  **kw)
+        canvas.create_arc(x2-2*r, y2-2*r, x2, y2, start=270, extent=90,  **kw)
+        canvas.create_rectangle(x1+r, y1, x2-r, y2, **kw)
+        canvas.create_rectangle(x1, y1+r, x2, y2-r, **kw)
 
     def set_current(self, idx: int):
         if idx == self.current:
@@ -411,7 +460,7 @@ class TXADiskCard(tk.Frame):
 
 
 class TXAPartitionCard(tk.Frame):
-    """Card hiển thị 1 phân vùng ổ đĩa để người dùng trực tiếp chọn phân vùng muốn cài Windows."""
+    """Card hiển thị 1 phân vùng ổ đĩa đẹp mắt, có thanh dung lượng trực quan (Mini Capacity Bar)"""
     def __init__(self, parent, disk, partition, on_select=None, selected=False, **kw):
         super().__init__(parent, bg=COLORS["bg_card"], cursor="hand2", **kw)
         self.disk = disk
@@ -419,17 +468,29 @@ class TXAPartitionCard(tk.Frame):
         self.on_select = on_select
         self.selected = selected
         self._build()
-        self._bind_click_recursive(self)
+        self._bind_events_recursive(self)
 
-    def _bind_click_recursive(self, widget):
+    def _bind_events_recursive(self, widget):
         widget.bind("<Button-1>", self._click)
+        widget.bind("<Enter>", self._on_enter)
+        widget.bind("<Leave>", self._on_leave)
         for child in widget.winfo_children():
-            self._bind_click_recursive(child)
+            self._bind_events_recursive(child)
+
+    def _on_enter(self, _):
+        if not self.selected:
+            self.configure(bg=COLORS["bg_hover"], highlightbackground=COLORS["border_card"])
+
+    def _on_leave(self, _):
+        if not self.selected:
+            self.configure(bg=COLORS["bg_card"], highlightbackground=COLORS["border"])
 
     def _build(self):
+        bg = COLORS["bg_card_selected"] if self.selected else COLORS["bg_card"]
         border_col = COLORS["accent"] if self.selected else COLORS["border"]
         self.configure(
-            highlightthickness=2,
+            bg=bg,
+            highlightthickness=2 if self.selected else 1,
             highlightbackground=border_col,
             padx=14, pady=10
         )
@@ -438,40 +499,74 @@ class TXAPartitionCard(tk.Frame):
         d = self.disk
 
         # Row 1: Badges & status
-        hdr = tk.Frame(self, bg=C["bg_card"])
+        hdr = tk.Frame(self, bg=bg)
         hdr.pack(fill="x")
+
+        # Radio checkmark icon
+        radio_icon = "●" if self.selected else "○"
+        radio_color = C["accent"] if self.selected else C["text_muted"]
+        tk.Label(hdr, text=radio_icon, bg=bg, fg=radio_color, font=("Segoe UI", 12, "bold")).pack(side="left", padx=(0, 8))
 
         # Badge phân vùng
         p_badge = f"  Ổ {p.letter}:\\  " if p.letter else f"  Phân vùng {p.index}  "
         badge_bg = C["accent"] if self.selected else (C["warning"] if (p.is_system or p.letter == "C") else C["info"])
-        tk.Label(hdr, text=p_badge, bg=badge_bg, fg=C["bg_dark"], font=F["subhead"], padx=6, pady=2).pack(side="left")
+        badge_fg = "#FFFFFF" if (self.selected or p.is_system or p.letter == "C") else C["bg_dark"]
+        tk.Label(hdr, text=p_badge, bg=badge_bg, fg=badge_fg, font=F["subhead"], padx=6, pady=2).pack(side="left")
 
         # Label tên phân vùng & dung lượng
         label_text = f" [{p.label}]" if p.label else ""
-        fs_text = f" ({p.fs})" if p.fs else ""
-        tk.Label(hdr, text=f"  {p.size_gb} GB{fs_text}{label_text}", bg=C["bg_card"], fg=C["text_primary"], font=F["heading"]).pack(side="left")
+        fs_text = f" • {p.fs}" if p.fs else ""
+        tk.Label(hdr, text=f"  {p.size_gb} GB{fs_text}{label_text}", bg=bg, fg=C["text_primary"], font=F["heading"]).pack(side="left")
 
         # Cảnh báo nếu là ổ đang chạy Windows
         if p.is_system or (p.letter == "C" and not d.is_system_disk):
-            tk.Label(hdr, text=" ⚠️ PHÂN VÙNG WINDOWS HIỆN TẠI ", bg=C["warning"], fg=C["bg_dark"], font=F["small"], padx=4).pack(side="right")
+            tk.Label(hdr, text=" ⚠️ WINDOWS HIỆN TẠI (TỰ REBOOT) ", bg=C["warning"], fg="#000000", font=F["badge"], padx=5, pady=2).pack(side="right")
         elif d.is_system_disk and p.letter == "C":
-            tk.Label(hdr, text=" ⚠️ ĐANG CHẠY WINDOWS (TỰ REBOOT) ", bg=C["warning"], fg=C["bg_dark"], font=F["small"], padx=4).pack(side="right")
+            tk.Label(hdr, text=" ⚠️ WINDOWS HIỆN TẠI (TỰ REBOOT) ", bg=C["warning"], fg="#000000", font=F["badge"], padx=5, pady=2).pack(side="right")
         elif p.bitlocker_status == "On":
-            tk.Label(hdr, text=" 🔒 BITLOCKER ", bg=C["info"], fg="#FFFFFF", font=F["small"], padx=4).pack(side="right")
+            tk.Label(hdr, text=" 🔒 BITLOCKER ", bg=C["info"], fg="#FFFFFF", font=F["badge"], padx=5, pady=2).pack(side="right")
 
-        # Row 2: Chi tiết ổ đĩa vật lý chứa phân vùng này
-        sub_row = tk.Frame(self, bg=C["bg_card"])
-        sub_row.pack(fill="x", pady=(6, 0))
+        # Row 2: Thanh hiển thị dung lượng (Capacity Bar)
+        total = p.size_gb
+        free = p.free_gb if p.free_gb > 0 else (total * 0.4 if total > 0 else 0)
+        used = max(0.0, total - free)
+        pct = int((used / total) * 100) if total > 0 else 50
+        pct = min(100, max(0, pct))
 
-        free_info = f"Còn trống: {p.free_gb} GB  •  " if p.free_gb > 0 else ""
-        disk_desc = f"{free_info}Nằm trên Disk {d.index} ({d.model} — {d.interface} {d.size_gb} GB)"
-        tk.Label(sub_row, text=disk_desc, bg=C["bg_card"], fg=C["text_secondary"], font=F["small"]).pack(side="left")
+        bar_frame = tk.Frame(self, bg=bg)
+        bar_frame.pack(fill="x", pady=(8, 2))
+
+        bar_canvas = tk.Canvas(bar_frame, height=5, bg=C["bg_input"], highlightthickness=0)
+        bar_canvas.pack(fill="x")
+
+        def _draw_bar(event=None):
+            w = bar_canvas.winfo_width()
+            if w <= 1:
+                w = 400
+            bar_canvas.delete("all")
+            bar_canvas.create_rectangle(0, 0, w, 5, fill=C["bg_input"], outline="")
+            fill_w = int(w * (pct / 100.0))
+            fill_col = C["accent"] if self.selected else (C["success"] if pct < 85 else C["warning"])
+            if fill_w > 0:
+                bar_canvas.create_rectangle(0, 0, fill_w, 5, fill=fill_col, outline="")
+
+        bar_canvas.bind("<Configure>", _draw_bar)
+        bar_canvas.after(20, _draw_bar)
+
+        # Row 3: Chi tiết ổ đĩa vật lý
+        sub_row = tk.Frame(self, bg=bg)
+        sub_row.pack(fill="x", pady=(4, 0))
+
+        free_desc = f"Đã dùng: {used:.1f} GB ({pct}%)  •  Còn trống: {free:.1f} GB  •  " if p.free_gb > 0 else ""
+        disk_desc = f"{free_desc}Nằm trên Disk {d.index} ({d.model} — {d.interface} {d.size_gb} GB)"
+        tk.Label(sub_row, text=disk_desc, bg=bg, fg=C["text_secondary"], font=F["small"]).pack(side="left")
 
     def set_selected(self, val: bool):
         self.selected = val
-        self.configure(
-            highlightbackground=COLORS["accent"] if val else COLORS["border"]
-        )
+        for w in self.winfo_children():
+            w.destroy()
+        self._build()
+        self._bind_events_recursive(self)
 
     def _click(self, _):
         if self.on_select:

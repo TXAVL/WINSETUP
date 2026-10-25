@@ -8,7 +8,7 @@ Unicode True
 RequestExecutionLevel admin
 
 !define PRODUCT_NAME "TXA WinSetup"
-!define PRODUCT_VERSION "1.4.0"
+!define PRODUCT_VERSION "1.5.0"
 !define PRODUCT_PUBLISHER "TXA Studio"
 !define PRODUCT_WEB_SITE "https://github.com/TXAVL/WINSETUP"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\TXAWinSetup.exe"
@@ -73,8 +73,8 @@ LicenseLangString myLicenseData ${LANG_VIETNAMESE} "assets\license_vi.rtf"
 LicenseLangString myLicenseData ${LANG_ENGLISH} "assets\license_en.rtf"
 
 ; ── Thông tin phiên bản & Metadata Windows (File Properties / Details) ──
-VIProductVersion "1.4.0.0"
-VIFileVersion "1.4.0.0"
+VIProductVersion "1.5.0.0"
+VIFileVersion "1.5.0.0"
 
 VIAddVersionKey /LANG=${LANG_VIETNAMESE} "ProductName" "${PRODUCT_NAME}"
 VIAddVersionKey /LANG=${LANG_VIETNAMESE} "ProductVersion" "${PRODUCT_VERSION}"

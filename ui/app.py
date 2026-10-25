@@ -142,7 +142,8 @@ class TXAWinSetup(tk.Tk):
 
     def _build_ui(self):
         # 1. Header TXA
-        hdr = tk.Frame(self, bg=COLORS["bg_panel"], height=58)
+        from core.updater import APP_VERSION
+        hdr = tk.Frame(self, bg=COLORS["bg_panel"], height=62)
         hdr.pack(fill="x")
         hdr.pack_propagate(False)
 
@@ -152,52 +153,60 @@ class TXAWinSetup(tk.Tk):
         if hasattr(self, '_logo_small_img') and self._logo_small_img:
             tk.Label(logo_frame, image=self._logo_small_img, bg=COLORS["bg_panel"]).pack(side="left", padx=(0, 8))
 
+        # Brand Logo Pill
         tk.Label(logo_frame, text="TXA", bg=COLORS["bg_panel"],
                  fg=COLORS["accent"], font=FONTS["logo"]).pack(side="left")
         tk.Label(logo_frame, text=" WinSetup", bg=COLORS["bg_panel"],
                  fg=COLORS["text_primary"], font=FONTS["heading"]).pack(side="left", pady=4)
 
-        ver_frame = tk.Frame(hdr, bg=COLORS["bg_panel"])
-        ver_frame.pack(side="left", padx=16, pady=8)
-        tk.Label(ver_frame, text="v1.3 Auto", bg=COLORS["bg_panel"],
-                 fg=COLORS["text_muted"], font=FONTS["small"]).pack(anchor="w")
-        tk.Label(ver_frame, text="Bộ cài Windows Tự Động", bg=COLORS["bg_panel"],
-                 fg=COLORS["text_secondary"], font=FONTS["small"]).pack(anchor="w")
+        ver_badge = tk.Label(logo_frame, text=f" v{APP_VERSION} PRO ", bg=COLORS["bg_card"],
+                             fg=COLORS["accent"], font=FONTS["badge"], padx=6, pady=2)
+        ver_badge.configure(highlightthickness=1, highlightbackground=COLORS["border_card"])
+        ver_badge.pack(side="left", padx=8)
 
         tk.Frame(hdr, width=1, bg=COLORS["border"]).pack(
-            side="left", fill="y", padx=12, pady=10
+            side="left", fill="y", padx=12, pady=12
         )
 
-        # Status indicator
-        self._status_dot = tk.Label(hdr, text="●", bg=COLORS["bg_panel"],
+        # Status Chip
+        status_chip = tk.Frame(hdr, bg=COLORS["bg_card"], padx=10, pady=4,
+                               highlightthickness=1, highlightbackground=COLORS["border_card"])
+        status_chip.pack(side="left", pady=12)
+
+        self._status_dot = tk.Label(status_chip, text="●", bg=COLORS["bg_card"],
                                     fg=COLORS["success"], font=FONTS["body"])
         self._status_dot.pack(side="left")
-        
+
         status_txt = "Môi trường: Windows PE (RAMDisk X:\\) — Đã mở khóa toàn bộ ổ đĩa" if self.is_winpe else "Sẵn sàng — Tự động chuyển WinPE nếu cài đè C:"
-        self._status_lbl = tk.Label(hdr, text=status_txt, bg=COLORS["bg_panel"],
+        self._status_lbl = tk.Label(status_chip, text=status_txt, bg=COLORS["bg_card"],
                                     fg=COLORS["success"] if self.is_winpe else COLORS["text_secondary"],
                                     font=FONTS["small"])
-        self._status_lbl.pack(side="left", padx=4)
+        self._status_lbl.pack(side="left", padx=6)
 
-        # Quick summary on header right
-        self._hdr_iso_lbl = tk.Label(hdr, text="Chưa chọn ISO", bg=COLORS["bg_panel"],
-                                     fg=COLORS["text_muted"], font=FONTS["small"])
-        self._hdr_iso_lbl.pack(side="right", padx=16)
-
-        # Nút kiểm tra cập nhật từ GitHub Release latest.yml
+        # Nút kiểm tra cập nhật từ GitHub Release
         self._btn_check_update = tk.Button(
-            hdr, text="⟳ Cập nhật",
+            hdr, text="✨ Bản cập nhật",
             bg=COLORS["bg_card"], fg=COLORS["accent"],
-            activebackground=COLORS["accent"], activeforeground=COLORS["bg_dark"],
-            font=FONTS["small"], relief="flat", padx=8, pady=2, cursor="hand2",
+            activebackground=COLORS["accent"], activeforeground="#FFFFFF",
+            font=FONTS["small"], relief="flat", padx=10, pady=4, cursor="hand2",
+            highlightthickness=1, highlightbackground=COLORS["border_card"],
             command=self._on_check_update_click
         )
-        self._btn_check_update.pack(side="right", padx=8)
+        self._btn_check_update.pack(side="right", padx=16, pady=12)
+
+        # Quick summary on header right
+        iso_chip = tk.Frame(hdr, bg=COLORS["bg_card"], padx=10, pady=4,
+                            highlightthickness=1, highlightbackground=COLORS["border_card"])
+        iso_chip.pack(side="right", padx=(0, 8), pady=12)
+        tk.Label(iso_chip, text="💽", bg=COLORS["bg_card"], font=("Segoe UI Emoji", 10)).pack(side="left", padx=(0, 4))
+        self._hdr_iso_lbl = tk.Label(iso_chip, text="Chưa chọn ISO", bg=COLORS["bg_card"],
+                                     fg=COLORS["text_muted"], font=FONTS["small"])
+        self._hdr_iso_lbl.pack(side="left")
 
         # Divider line
-        tk.Frame(self, bg=COLORS["accent"], height=2).pack(fill="x")
+        tk.Frame(self, bg=COLORS["border"], height=1).pack(fill="x")
 
-        # 2. Thanh Tabs TXA
+        # 2. Thanh Tabs TXA (Segmented Pill)
         self._tab_bar = TXATabBar(
             self, TAB_ITEMS,
             on_change=self._switch_tab,
@@ -212,7 +221,7 @@ class TXAWinSetup(tk.Tk):
         self._content.pack(fill="both", expand=True, padx=16, pady=10)
 
         # 4. Bottom nav bar
-        self._nav = tk.Frame(self, bg=COLORS["bg_panel"], height=60)
+        self._nav = tk.Frame(self, bg=COLORS["bg_panel"], height=62)
         self._nav.pack(fill="x", side="bottom")
         self._nav.pack_propagate(False)
 
@@ -221,16 +230,16 @@ class TXAWinSetup(tk.Tk):
             command=lambda: self._step_tab(-1), style="ghost",
             width=130, height=38
         )
-        self._btn_prev_tab.pack(side="left", padx=16, pady=11)
+        self._btn_prev_tab.pack(side="left", padx=16, pady=12)
 
         self._btn_next_tab = TXAButton(
             self._nav, "Tab tiếp →",
             command=lambda: self._step_tab(1), style="ghost",
             width=130, height=38
         )
-        self._btn_next_tab.pack(side="left", padx=4, pady=11)
+        self._btn_next_tab.pack(side="left", padx=4, pady=12)
 
-        tk.Label(self._nav, text="© 2026 TXA  •  txasoftdev@gmail.com",
+        tk.Label(self._nav, text="TXA Studio © 2026  •  txasoftdev@gmail.com",
                  bg=COLORS["bg_panel"], fg=COLORS["text_muted"],
                  font=FONTS["small"]).pack(side="left", padx=16)
 
@@ -238,7 +247,7 @@ class TXAWinSetup(tk.Tk):
         self._btn_auto_install = TXAButton(
             self._nav, "🚀 BẮT ĐẦU CÀI ĐẶT TỰ ĐỘNG",
             command=self._confirm_and_start, style="primary",
-            width=260, height=38
+            width=280, height=40
         )
         self._btn_auto_install.pack(side="right", padx=16, pady=11)
 
@@ -304,22 +313,31 @@ class TXAWinSetup(tk.Tk):
         if not self._selected_iso:
             drop = tk.Frame(iso_card, bg=COLORS["bg_input"],
                             highlightthickness=1,
-                            highlightbackground=COLORS["border"],
+                            highlightbackground=COLORS["border_card"],
                             cursor="hand2")
-            drop.pack(fill="x", ipady=12, pady=4)
+            drop.pack(fill="x", ipady=14, pady=6)
             drop.bind("<Button-1>", lambda _: self._browse_iso())
 
-            tk.Label(drop, text="📁", bg=COLORS["bg_input"],
-                     font=("Segoe UI Emoji", 24)).pack(pady=(4, 2))
-            tk.Label(drop, text="Click để chọn file ISO Windows",
+            def _drop_enter(e):
+                drop.config(bg=COLORS["bg_hover"], highlightbackground=COLORS["accent"])
+            def _drop_leave(e):
+                drop.config(bg=COLORS["bg_input"], highlightbackground=COLORS["border_card"])
+            drop.bind("<Enter>", _drop_enter)
+            drop.bind("<Leave>", _drop_leave)
+
+            tk.Label(drop, text="💿", bg=COLORS["bg_input"],
+                     font=("Segoe UI Emoji", 26)).pack(pady=(4, 2))
+            tk.Label(drop, text="Click để duyệt và chọn file ISO Windows",
                      bg=COLORS["bg_input"], fg=COLORS["text_primary"],
-                     font=FONTS["subhead"]).pack()
-            tk.Label(drop, text="Hỗ trợ file ISO / WIM mọi phiên bản",
-                     bg=COLORS["bg_input"], fg=COLORS["text_muted"],
+                     font=FONTS["heading"]).pack()
+            tk.Label(drop, text="Tự động tương thích Windows 11 24H2 / 23H2 / Insider Preview 29695.1001 & Windows 10 mọi phiên bản",
+                     bg=COLORS["bg_input"], fg=COLORS["text_secondary"],
                      font=FONTS["small"]).pack(pady=(2, 6))
 
-            TXAButton(iso_card, "Chọn file ISO...", self._browse_iso,
-                      style="ghost", width=160, height=34).pack(anchor="w", pady=(6, 2))
+            btn_browse_row = tk.Frame(iso_card, bg=COLORS["bg_card"])
+            btn_browse_row.pack(fill="x", pady=(4, 2))
+            TXAButton(btn_browse_row, "📂 Chọn file ISO / WIM...", self._browse_iso,
+                      style="ghost", width=190, height=34).pack(side="left")
         else:
             row_file = tk.Frame(iso_card, bg=COLORS["bg_card"])
             row_file.pack(fill="x", pady=4)
