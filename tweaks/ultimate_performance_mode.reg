@@ -1,0 +1,19 @@
+Windows Registry Editor Version 5.00
+
+; ====================================================================
+; TXA WinSetup - Kích hoạt chế độ Hiệu năng tối đa (Ultimate Performance)
+; Giảm độ trễ khung hình (DPC Latency), tối ưu phản hồi bàn phím/chuột
+; ====================================================================
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power]
+"HibernateEnabled"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile]
+"SystemResponsiveness"=dword:00000000
+"NetworkThrottlingIndex"=dword:ffffffff
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games]
+"GPU Priority"=dword:00000008
+"Priority"=dword:00000006
+"Scheduling Category"="High"
+"SFIO Priority"="High"

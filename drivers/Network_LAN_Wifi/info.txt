@@ -1,0 +1,2 @@
+# Gói Driver Mạng (LAN & Wifi)
+Đặt các file driver mạng (.inf, .sys, .cat) vào đây để TXA WinSetup tự động nạp.

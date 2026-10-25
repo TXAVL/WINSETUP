@@ -1,0 +1,17 @@
+Windows Registry Editor Version 5.00
+
+; ====================================================================
+; TXA WinSetup - Tối ưu cài đặt Windows 11 trên mọi dòng máy (Legacy / UEFI)
+; Vượt kiểm tra TPM 2.0, SecureBoot, RAM tối thiểu 4GB, CPU & Ổ cứng
+; ====================================================================
+
+[HKEY_LOCAL_MACHINE\SYSTEM\Setup\LabConfig]
+"BypassTPMCheck"=dword:00000001
+"BypassSecureBootCheck"=dword:00000001
+"BypassRAMCheck"=dword:00000001
+"BypassStorageCheck"=dword:00000001
+"BypassCPUCheck"=dword:00000001
+"BypassDiskCheck"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SYSTEM\Setup\MoSetup]
+"AllowUpgradesWithUnsupportedTPMOrCPU"=dword:00000001

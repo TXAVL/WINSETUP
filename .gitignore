@@ -1,0 +1,35 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging build directories
+build/
+dist/
+dist_portable/
+*.spec
+*.manifest
+
+# Binaries in prod folder (distributed via GitHub Releases)
+prod/*.exe
+prod/*.zip
+
+# Logs and databases
+*.log
+*.sqlite3
+
+# Temporary / OS files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace

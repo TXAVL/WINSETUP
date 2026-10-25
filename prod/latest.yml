@@ -1,0 +1,21 @@
+version: "1.3.0"
+release_date: "2026-10-25"
+repository: "TXAVL/WINSETUP"
+channel: "stable"
+setup_name: "TXAWinSetup_Setup.exe"
+setup_size: 15966856
+setup_sha256: "5B8711CD645458261D5DAA52FBD38B293A0B0DDCD1786D936B3F5E6FFB313943"
+setup_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Setup.exe"
+portable_name: "TXAWinSetup_Portable.exe"
+portable_size: 15771621
+portable_sha256: "CAFD92FAF086B76B2B2F85FAB6DFB590231157B496936A0EE3A21EB0E0C90CD1"
+portable_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Portable.exe"
+changelog: |
+  • Nâng cấp lên phiên bản ổn định TXA WinSetup v1.3.0.
+  • Tối ưu bộ cài đặt NSIS siêu gọn nhẹ (chỉ cài TXAWinSetup.exe và 3 thư mục mẫu unattend, drivers, tweaks).
+  • Tích hợp tự động quét và load file XML mẫu unattend vào danh sách thả xuống.
+  • Tự động phát hiện và hiển thị các gói driver offline trong thư mục drivers/.
+  • Hỗ trợ chọn động các bản tinh chỉnh hệ điều hành Windows Registry (.reg) từ thư mục tweaks/.
+  • Hỗ trợ menu chuột phải Windows Explorer (Open With) cho file ISO, WIM, ESD.
+  • Tối ưu tốc độ tải và kiểm tra phân vùng ổ đĩa (Diskpart & WMI).
+  • Tích hợp API kiểm tra cập nhật tự động trực tiếp từ GitHub Releases.
