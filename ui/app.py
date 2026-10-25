@@ -142,11 +142,34 @@ class TXAWinSetup(tk.Tk):
 
     def _build_ui(self):
         # 1. Header TXA
+        # 1. Header TXA (Dark Slate / Cyber Obsidian)
         from core.updater import APP_VERSION
         hdr = tk.Frame(self, bg=COLORS["bg_panel"], height=62)
         hdr.pack(fill="x")
         hdr.pack_propagate(False)
 
+        # ── CÁC PHẦN TỬ BÊN PHẢI (PACK TRƯỚC ĐỂ LUÔN NEO GÓC PHẢI, KHÔNG BAO GIỜ BỊ ĐÈ) ──
+        # Nút kiểm tra cập nhật từ GitHub Release
+        self._btn_check_update = tk.Button(
+            hdr, text=" ✨ Kiểm tra cập nhật ",
+            bg="#2A1B0E", fg=COLORS["accent"],
+            activebackground=COLORS["accent"], activeforeground="#FFFFFF",
+            font=FONTS["subhead"], relief="flat", padx=12, pady=5, cursor="hand2",
+            highlightthickness=1, highlightbackground=COLORS["accent"],
+            command=self._on_check_update_click
+        )
+        self._btn_check_update.pack(side="right", padx=(8, 16), pady=12)
+
+        # Quick summary on header right
+        iso_chip = tk.Frame(hdr, bg=COLORS["bg_card"], padx=10, pady=4,
+                            highlightthickness=1, highlightbackground=COLORS["border_card"])
+        iso_chip.pack(side="right", padx=(0, 6), pady=12)
+        tk.Label(iso_chip, text="💽", bg=COLORS["bg_card"], font=("Segoe UI Emoji", 10)).pack(side="left", padx=(0, 4))
+        self._hdr_iso_lbl = tk.Label(iso_chip, text="Chưa chọn ISO", bg=COLORS["bg_card"],
+                                     fg=COLORS["text_muted"], font=FONTS["small"])
+        self._hdr_iso_lbl.pack(side="left")
+
+        # ── CÁC PHẦN TỬ BÊN TRÁI ──
         logo_frame = tk.Frame(hdr, bg=COLORS["bg_panel"])
         logo_frame.pack(side="left", padx=16)
 
@@ -168,7 +191,7 @@ class TXAWinSetup(tk.Tk):
             side="left", fill="y", padx=12, pady=12
         )
 
-        # Status Chip
+        # Status Chip (ở giữa, giới hạn không gian để không tràn màn hình)
         status_chip = tk.Frame(hdr, bg=COLORS["bg_card"], padx=10, pady=4,
                                highlightthickness=1, highlightbackground=COLORS["border_card"])
         status_chip.pack(side="left", pady=12)
@@ -177,31 +200,11 @@ class TXAWinSetup(tk.Tk):
                                     fg=COLORS["success"], font=FONTS["body"])
         self._status_dot.pack(side="left")
 
-        status_txt = "Môi trường: Windows PE (RAMDisk X:\\) — Đã mở khóa toàn bộ ổ đĩa" if self.is_winpe else "Sẵn sàng — Tự động chuyển WinPE nếu cài đè C:"
+        status_txt = "WinPE (X:\\)" if self.is_winpe else "Sẵn sàng cài đặt"
         self._status_lbl = tk.Label(status_chip, text=status_txt, bg=COLORS["bg_card"],
                                     fg=COLORS["success"] if self.is_winpe else COLORS["text_secondary"],
                                     font=FONTS["small"])
         self._status_lbl.pack(side="left", padx=6)
-
-        # Nút kiểm tra cập nhật từ GitHub Release
-        self._btn_check_update = tk.Button(
-            hdr, text="✨ Bản cập nhật",
-            bg=COLORS["bg_card"], fg=COLORS["accent"],
-            activebackground=COLORS["accent"], activeforeground="#FFFFFF",
-            font=FONTS["small"], relief="flat", padx=10, pady=4, cursor="hand2",
-            highlightthickness=1, highlightbackground=COLORS["border_card"],
-            command=self._on_check_update_click
-        )
-        self._btn_check_update.pack(side="right", padx=16, pady=12)
-
-        # Quick summary on header right
-        iso_chip = tk.Frame(hdr, bg=COLORS["bg_card"], padx=10, pady=4,
-                            highlightthickness=1, highlightbackground=COLORS["border_card"])
-        iso_chip.pack(side="right", padx=(0, 8), pady=12)
-        tk.Label(iso_chip, text="💽", bg=COLORS["bg_card"], font=("Segoe UI Emoji", 10)).pack(side="left", padx=(0, 4))
-        self._hdr_iso_lbl = tk.Label(iso_chip, text="Chưa chọn ISO", bg=COLORS["bg_card"],
-                                     fg=COLORS["text_muted"], font=FONTS["small"])
-        self._hdr_iso_lbl.pack(side="left")
 
         # Divider line
         tk.Frame(self, bg=COLORS["border"], height=1).pack(fill="x")
@@ -256,7 +259,10 @@ class TXAWinSetup(tk.Tk):
 
     def _set_status(self, msg: str, color: str = None):
         if hasattr(self, '_status_lbl'):
-            self._status_lbl.config(text=msg)
+            display_msg = msg
+            if len(display_msg) > 42:
+                display_msg = display_msg[:39] + "..."
+            self._status_lbl.config(text=display_msg)
         if color and hasattr(self, '_status_dot'):
             self._status_dot.config(fg=color)
 
@@ -676,9 +682,9 @@ class TXAWinSetup(tk.Tk):
         p_name = f"ổ {partition.letter}:\\" if partition.letter else f"phân vùng {partition.index}"
         is_cur_win = (partition.is_system or partition.letter == "C") and partition.size_gb >= 15.0
         if is_cur_win and not self.is_winpe:
-            self._set_status(f"Đã chọn {p_name} (Windows hiện tại - Tool sẽ tự động reboot để cài sạch an toàn)", COLORS["warning"])
+            self._set_status(f"Đã chọn {p_name} (Windows hiện tại)", COLORS["warning"])
         else:
-            self._set_status(f"Đã chọn {p_name} ({partition.size_gb} GB) trên Disk {disk.index}", COLORS["success"])
+            self._set_status(f"Đã chọn {p_name} ({partition.size_gb} GB)", COLORS["success"])
 
     def _render_size_controls_ui(self, parent):
         for w in parent.winfo_children():
@@ -1063,6 +1069,37 @@ class TXAWinSetup(tk.Tk):
         if self._bios_key:
             tk.Label(r_key, text=f"✓ Đã phát hiện BIOS OEM ({self._bios_edition})",
                      bg="#064e3b", fg="#34d399", font=FONTS["small"], padx=6, pady=2).pack(side="left", padx=6)
+
+        # ── Card 4: Cập nhật Ứng dụng (Software Update) ──
+        card_update = TXACard(c)
+        card_update.pack(fill="x", pady=6)
+
+        hdr_up = tk.Frame(card_update, bg=COLORS["bg_card"])
+        hdr_up.pack(fill="x", pady=(0, 6))
+        TXALabel(hdr_up, "4. Cập nhật Phần mềm TXA WinSetup",
+                 style="heading", bg=COLORS["bg_card"]).pack(side="left")
+        from core.updater import APP_VERSION, is_auto_check_enabled, set_auto_check_enabled
+        tk.Label(hdr_up, text=f" PHIÊN BẢN v{APP_VERSION} ", bg="#374151", fg="#F97316",
+                 font=("Segoe UI", 8, "bold"), padx=6, pady=1).pack(side="left", padx=8)
+
+        r_up = tk.Frame(card_update, bg=COLORS["bg_card"])
+        r_up.pack(fill="x", pady=4)
+
+        self._var_auto_update = tk.BooleanVar(value=is_auto_check_enabled())
+        def _on_toggle_auto_update():
+            set_auto_check_enabled(self._var_auto_update.get())
+
+        tk.Checkbutton(
+            r_up, text="  Tự động kiểm tra bản cập nhật mới từ GitHub khi mở phần mềm",
+            variable=self._var_auto_update, command=_on_toggle_auto_update,
+            **cb_style
+        ).pack(side="left")
+
+        TXAButton(
+            r_up, " ✨ Kiểm tra cập nhật ngay",
+            command=self._on_check_update_click,
+            style="accent", width=190, height=30
+        ).pack(side="right", padx=6)
 
     def _load_bios_key(self):
         def _worker():
