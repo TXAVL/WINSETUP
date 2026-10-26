@@ -448,7 +448,16 @@ def run_full_install(
 
         from .boot_env import setup_txa_boot_environment
         iso_drive = state.config.get("wim_drive", "")
-        setup_txa_boot_environment(iso_drive=iso_drive, progress_cb=lambda p, m: log_cb(progress, m, p * 0.4 + 35.0))
+        ok_env, env_msg = setup_txa_boot_environment(
+            iso_drive=iso_drive,
+            progress_cb=lambda p, m: log_cb(progress, m, p * 0.4 + 35.0)
+        )
+        if not ok_env:
+            return False, (
+                f"Không thể thiết lập môi trường boot để cài đặt lên ổ hệ thống:\n{env_msg}\n\n"
+                "Giải pháp: Hãy đảm bảo file ISO Windows đang được mount, "
+                "hoặc chạy tool từ môi trường WinPE để cài đặt trực tiếp."
+            )
 
         set_shell_replacement(tool_exe_path)
         state.advance(Step.SHELL_REPLACED)

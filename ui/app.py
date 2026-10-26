@@ -1506,6 +1506,10 @@ class TXAWinSetup(tk.Tk):
                 except Exception:
                     pass
 
+            # Lưu wim_drive để boot_env biết drive ISO đang mount
+            if self._wim_drive:
+                self._config["wim_drive"] = self._wim_drive
+
             # Lưu đường dẫn driver và tùy chọn tự động khôi phục
             if hasattr(self, '_driver_path_e') and self._driver_path_e:
                 try:

@@ -13,9 +13,16 @@ def _run_cmd(cmd: str, timeout: int = 60) -> tuple[int, str]:
     except Exception as e:
         return -1, str(e)
 
-def find_system_boot_sdi() -> Optional[str]:
-    """Tìm file boot.sdi có sẵn trên hệ thống Windows."""
-    candidates = [
+def find_system_boot_sdi(iso_drive: str = "") -> Optional[str]:
+    """Tìm file boot.sdi có sẵn trên hệ thống Windows hoặc trong ISO đã mount."""
+    candidates = []
+    # Ưu tiên tìm trong ISO đã mount (luôn có boot\boot.sdi trong Windows ISO)
+    if iso_drive:
+        candidates += [
+            f"{iso_drive}:\\boot\\boot.sdi",
+            f"{iso_drive}:\\Boot\\boot.sdi",
+        ]
+    candidates += [
         r"C:\Windows\Boot\DVD\EFI\boot.sdi",
         r"C:\Windows\Boot\DVD\PCAT\boot.sdi",
         r"C:\Windows\System32\Recovery\boot.sdi",
@@ -86,15 +93,20 @@ def setup_txa_boot_environment(
     except Exception as e:
         return False, f"Không thể sao chép boot.wim: {e}"
 
-    # 2. Tìm và sao chép boot.sdi
+    # 2. Tìm và sao chép boot.sdi (bắt buộc — nếu không có, ramdisk không mount được WIM)
     _log("Đang nạp file nạp khởi động RAMDisk (boot.sdi)...", 60.0)
-    sdi_src = find_system_boot_sdi()
+    sdi_src = find_system_boot_sdi(iso_drive)
     dest_sdi = target_path / "boot.sdi"
-    if sdi_src and not dest_sdi.exists():
+    if not sdi_src:
+        return False, (
+            "Không tìm thấy file boot.sdi từ ISO hoặc hệ thống!\n"
+            "Hãy đảm bảo file ISO Windows vẫn đang được mount trước khi cài đặt."
+        )
+    if not dest_sdi.exists() or dest_sdi.stat().st_size != Path(sdi_src).stat().st_size:
         try:
             shutil.copy2(sdi_src, dest_sdi)
-        except Exception:
-            pass
+        except Exception as e:
+            return False, f"Không thể sao chép boot.sdi: {e}"
 
     # 3. Cấu hình BCD Entry để máy tự khởi động vào TXA Boot Environment
     _log("Đang cấu hình menu khởi động BCD cho môi trường TXA...", 75.0)
