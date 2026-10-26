@@ -7,7 +7,7 @@ import re
 import threading
 from typing import Dict, Any, Optional, Tuple
 
-APP_VERSION = "1.5.1"
+APP_VERSION = "1.5.2"
 REPO_OWNER = "TXAVL"
 REPO_NAME = "WINSETUP"
 

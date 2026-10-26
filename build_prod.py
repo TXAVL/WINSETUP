@@ -102,8 +102,8 @@ def calc_sha256(filepath):
 setup_size, setup_hash = calc_sha256(PROD_DIR / "TXAWinSetup_Setup.exe")
 port_size, port_hash = calc_sha256(PROD_DIR / "TXAWinSetup_Portable.exe")
 
-latest_yml_content = f"""version: "1.5.1"
-release_date: "2026-10-26"
+latest_yml_content = f"""version: "1.5.2"
+release_date: "2026-10-27"
 repository: "TXAVL/WINSETUP"
 channel: "stable"
 setup_name: "TXAWinSetup_Setup.exe"
