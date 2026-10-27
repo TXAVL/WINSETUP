@@ -1,21 +1,31 @@
-version: "1.5.2"
+version: "1.5.3"
 release_date: "2026-10-27"
 repository: "TXAVL/WINSETUP"
 channel: "stable"
 setup_name: "TXAWinSetup_Setup.exe"
-setup_size: 16460892
-setup_sha256: "5896F2C2E672171B23F42471FF9AA417E3296548DC2F54FB02638A18D2CB285F"
+setup_size: 16460488
+setup_sha256: "8FEDBCBC58C600CF30B3EA657134B0789C8B503900FE9B4D7F5E6CEDEB455647"
 setup_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Setup.exe"
 portable_name: "TXAWinSetup_Portable.exe"
-portable_size: 16587014
-portable_sha256: "66ED5E9148E17951AE77E3564EB69F0F526309A6F6B783BC96D51AE4BDF9727A"
+portable_size: 16585512
+portable_sha256: "7BF72A661BBBF95724BD4CED821559364866B8EB33160EA5810ED7E375B4328A"
 portable_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Portable.exe"
 changelog: |
+    • [v1.5.3] Khắc phục mất desktop (explorer.exe bị kill) khi huỷ cài đặt hoặc WinPE không hoàn tất:
+      - Phát hiện trạng thái Shell Thay Thế khi khởi động lại vào Windows thường.
+      - Hiển thị dialog phục hồi: chọn khôi phục explorer hoặc thử boot WinPE lại.
+      - Tự động gọi restore_shell() + khởi động lại explorer.exe ngay trong phiên hiện tại.
     • [v1.5.2] Khắc phục lỗi nghiêm trọng: Windows Boot Manager báo lỗi 0xc000000f sau khi reboot cài đặt lên ổ hệ thống:
       - Nguyên nhân: Thiếu file boot.sdi — file bắt buộc để RAMDisk mount được WIM khi khởi động vào môi trường TXA Boot.
-      - Fix: Tự động tìm và sao chép boot.sdi từ ISO Windows đang mount (luôn có tại boot\\boot.sdi trong mọi bản ISO Windows).
+      - Fix: Tự động tìm và sao chép boot.sdi từ ISO Windows đang mount (luôn có tại boot\boot.sdi trong mọi bản ISO Windows).
       - Fix: Hiển thị thông báo lỗi rõ ràng thay vì reboot máy khi không tìm thấy boot.sdi.
-    • [v1.5.1] Tối ưu hóa toàn diện cho môi trường cứu hộ Windows PE (WinPE / WinRE / RAMDisk X:\\).
-    • [v1.5.1] Nâng cấp tốc độ tải bản cập nhật: Tăng kích thước bộ đệm truyền dữ liệu lên 256 KB.
-    • [v1.5.1] Khắc phục triệt để lỗi nhận diện nhầm phân vùng boot EFI thành phân vùng Windows đang chạy.
-    • [v1.5.1] Đột phá giao diện Cyber Obsidian UI 2.0 và Thanh Mini Capacity Bar trực quan.
+    • [v1.5.1] Tối ưu hóa toàn diện cho môi trường cứu hộ Windows PE (WinPE / WinRE / RAMDisk X:\):
+      - Tự động nhận diện WinPE và ẩn hoàn toàn toàn bộ chức năng kiểm tra cập nhật (nút kiểm tra trên header, luồng check ngầm khi mở app, mục cập nhật trong Cài đặt).
+      - Tinh gọn Tab Driver trên WinPE: Ẩn tính năng trích xuất driver và chỉ giữ lại chế độ nạp trực tiếp gói Driver offline vào phân vùng Windows mới.
+      - Chuẩn hóa nhận diện phân vùng trên WinPE: Ổ C: được xử lý cài đặt trực tiếp, loại bỏ nhãn cảnh báo reboot không cần thiết.
+      - Hỗ trợ lệnh wpeutil reboot để khởi động lại máy tức thì sau khi bung cài đặt xong từ WinPE.
+      - Hỗ trợ ImDisk fallback khi mount file ISO trên các bản WinPE rút gọn không có PowerShell.
+    • [v1.5.1] Nâng cấp tốc độ tải bản cập nhật: Tăng kích thước bộ đệm truyền dữ liệu lên 256 KB, giúp quá trình tải nhanh hơn gấp nhiều lần.
+    • [v1.5.1] Khắc phục triệt để lỗi nhận diện nhầm phân vùng boot EFI (0.2 GB) thành phân vùng Windows đang chạy.
+    • [v1.5.1] Đột phá toàn diện giao diện người dùng (Cyber Obsidian UI 2.0): Nâng cấp bảng màu Obsidian & Sunset Orange độ tương phản cao, phong cách hiện đại chống mỏi mắt.
+    • [v1.5.1] Thanh hiển thị dung lượng phân vùng trực quan (Mini Capacity Bar): Trực tiếp xem dung lượng đã dùng, còn trống và định dạng ổ đĩa tương tự Windows Explorer.

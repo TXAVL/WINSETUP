@@ -18,13 +18,14 @@ VSVersionInfo(
         u'040904B0',
         [StringStruct(u'CompanyName', u'TXA Studio'),
         StringStruct(u'FileDescription', u'TXA WinSetup - Bo cai Windows Tu Dong'),
-        StringStruct(u'FileVersion', u'1.5.2.0'),
+        StringStruct(u'FileVersion', u'1.5.3.0'),
         StringStruct(u'InternalName', u'TXAWinSetup'),
         StringStruct(u'LegalCopyright', u'Copyright (C) 2026 TXA Studio'),
         StringStruct(u'OriginalFilename', u'TXAWinSetup.exe'),
         StringStruct(u'ProductName', u'TXA WinSetup'),
-        StringStruct(u'ProductVersion', u'1.5.2.0')])
+        StringStruct(u'ProductVersion', u'1.5.3.0')])
       ]), 
     VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
   ]
 )
+
