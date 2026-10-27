@@ -1,16 +1,20 @@
-version: "1.5.3"
+version: "1.5.4"
 release_date: "2026-10-27"
 repository: "TXAVL/WINSETUP"
 channel: "stable"
 setup_name: "TXAWinSetup_Setup.exe"
-setup_size: 16460488
-setup_sha256: "8FEDBCBC58C600CF30B3EA657134B0789C8B503900FE9B4D7F5E6CEDEB455647"
+setup_size: 16462570
+setup_sha256: "76B92A5F57D0EAD7EE65AF39EFCD8FF2531D5EB31988CB8868A9D094CB34C064"
 setup_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Setup.exe"
 portable_name: "TXAWinSetup_Portable.exe"
-portable_size: 16585512
-portable_sha256: "7BF72A661BBBF95724BD4CED821559364866B8EB33160EA5810ED7E375B4328A"
+portable_size: 16588265
+portable_sha256: "70606F484739B5105EAE8CC554D41D7B406139EBAFD8DA2CF17BDF3F9C135680"
 portable_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Portable.exe"
 changelog: |
+    • [v1.5.4] Khắc phục WinPE khởi động vào Windows Setup (setup.exe) thay vì TXA WinSetup:
+      - Dùng DISM mount boot.wim, nhúng TXAWinSetup.exe vào Windows\System32 của WIM.
+      - Ghi đè startnet.cmd để WinPE tự khởi chạy TXA thay vì Windows Setup.
+      - Tích hợp vào luồng setup_txa_boot_environment(); WinPE giờ chạy đúng app.
     • [v1.5.3] Khắc phục mất desktop (explorer.exe bị kill) khi huỷ cài đặt hoặc WinPE không hoàn tất:
       - Phát hiện trạng thái Shell Thay Thế khi khởi động lại vào Windows thường.
       - Hiển thị dialog phục hồi: chọn khôi phục explorer hoặc thử boot WinPE lại.

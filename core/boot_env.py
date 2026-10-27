@@ -61,9 +61,56 @@ def is_uefi() -> bool:
     _, out = _run_cmd('bcdedit /enum {current}')
     return "winload.efi" in out.lower()
 
+def _inject_app_into_wim(wim_path: Path, app_exe_path: str, log: Callable) -> bool:
+    """Mount boot.wim (index 1), inject TXA exe + custom startnet.cmd, unmount+commit."""
+    import tempfile as _tmpmod
+    mount_dir = Path(_tmpmod.mkdtemp(prefix="txa_wim_mount_"))
+    log("Đang mount WIM để tích hợp TXA vào môi trường WinPE...", 55.0)
+    rc, out = _run_cmd(
+        f'dism /Mount-Wim /WimFile:"{wim_path}" /index:1 /MountDir:"{mount_dir}"',
+        timeout=300
+    )
+    if rc != 0:
+        log(f"[WARN] Không mount được WIM: {out}")
+        shutil.rmtree(str(mount_dir), ignore_errors=True)
+        return False
+    try:
+        sys32 = mount_dir / "Windows" / "System32"
+        txa_dest = sys32 / "TXAWinSetup.exe"
+        shutil.copy2(app_exe_path, txa_dest)
+        log("Đã nhúng TXAWinSetup.exe vào WinPE", 68.0)
+
+        # Override startnet.cmd: chạy TXA thay vì Windows Setup
+        startnet = sys32 / "startnet.cmd"
+        startnet.write_text(
+            "@echo off\r\n"
+            "wpeinit\r\n"
+            "X:\\Windows\\System32\\TXAWinSetup.exe\r\n",
+            encoding="utf-8"
+        )
+        log("Đã cấu hình WinPE tự khởi chạy TXA thay vì Windows Setup", 72.0)
+
+        rc2, out2 = _run_cmd(
+            f'dism /Unmount-Wim /MountDir:"{mount_dir}" /Commit',
+            timeout=300
+        )
+        if rc2 != 0:
+            log(f"[WARN] Lỗi commit WIM: {out2}")
+            return False
+        log("✓ WIM đã được tùy chỉnh thành công", 75.0)
+        return True
+    except Exception as e:
+        log(f"[WARN] Lỗi inject app vào WIM: {e}")
+        _run_cmd(f'dism /Unmount-Wim /MountDir:"{mount_dir}" /Discard')
+        return False
+    finally:
+        shutil.rmtree(str(mount_dir), ignore_errors=True)
+
+
 def setup_txa_boot_environment(
     iso_drive: str,
     target_dir: str = r"C:\TXA_Boot",
+    app_exe_path: str = "",
     progress_cb: Optional[Callable] = None,
 ) -> tuple[bool, str]:
     """
@@ -93,8 +140,15 @@ def setup_txa_boot_environment(
     except Exception as e:
         return False, f"Không thể sao chép boot.wim: {e}"
 
-    # 2. Tìm và sao chép boot.sdi (bắt buộc — nếu không có, ramdisk không mount được WIM)
-    _log("Đang nạp file nạp khởi động RAMDisk (boot.sdi)...", 60.0)
+    # 2. Inject TXA app + custom startnet.cmd vào boot.wim (DISM)
+    # Nếu thất bại chỉ cảnh báo, không dừng — WinPE vẫn boot được (dù chạy setup.exe thay vì TXA)
+    if app_exe_path and Path(app_exe_path).exists():
+        _inject_app_into_wim(dest_wim, app_exe_path, _log)
+    else:
+        _log("[WARN] Không có đường dẫn TXA exe — bỏ qua bước inject app vào WinPE", 55.0)
+
+    # 3. Tìm và sao chép boot.sdi (bắt buộc — nếu không có, ramdisk không mount được WIM)
+    _log("Đang nạp file nạp khởi động RAMDisk (boot.sdi)...", 77.0)
     sdi_src = find_system_boot_sdi(iso_drive)
     dest_sdi = target_path / "boot.sdi"
     if not sdi_src:

@@ -102,7 +102,7 @@ def calc_sha256(filepath):
 setup_size, setup_hash = calc_sha256(PROD_DIR / "TXAWinSetup_Setup.exe")
 port_size, port_hash = calc_sha256(PROD_DIR / "TXAWinSetup_Portable.exe")
 
-latest_yml_content = f"""version: "1.5.3"
+latest_yml_content = f"""version: "1.5.4"
 release_date: "2026-10-27"
 repository: "TXAVL/WINSETUP"
 channel: "stable"
@@ -115,6 +115,10 @@ portable_size: {port_size}
 portable_sha256: "{port_hash}"
 portable_url: "https://github.com/TXAVL/WINSETUP/releases/latest/download/TXAWinSetup_Portable.exe"
 changelog: |
+    • [v1.5.4] Khắc phục WinPE khởi động vào Windows Setup (setup.exe) thay vì TXA WinSetup:
+      - Dùng DISM mount boot.wim, nhúng TXAWinSetup.exe vào Windows\\System32 của WIM.
+      - Ghi đè startnet.cmd để WinPE tự khởi chạy TXA thay vì Windows Setup.
+      - Tích hợp vào luồng setup_txa_boot_environment(); WinPE giờ chạy đúng app.
     • [v1.5.3] Khắc phục mất desktop (explorer.exe bị kill) khi huỷ cài đặt hoặc WinPE không hoàn tất:
       - Phát hiện trạng thái Shell Thay Thế khi khởi động lại vào Windows thường.
       - Hiển thị dialog phục hồi: chọn khôi phục explorer hoặc thử boot WinPE lại.

@@ -450,6 +450,7 @@ def run_full_install(
         iso_drive = state.config.get("wim_drive", "")
         ok_env, env_msg = setup_txa_boot_environment(
             iso_drive=iso_drive,
+            app_exe_path=tool_exe_path,
             progress_cb=lambda p, m: log_cb(progress, m, p * 0.4 + 35.0)
         )
         if not ok_env:
