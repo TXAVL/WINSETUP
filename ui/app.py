@@ -1773,8 +1773,39 @@ class TXAWinSetup(tk.Tk):
         threading.Thread(target=_worker, daemon=True).start()
 
     def _ask_resume(self):
-        from core.state import STEP_LABELS
+        from core.state import STEP_LABELS, Step
+        from core.installer import restore_shell
+        import subprocess as _sp
+
         step = self.state.step
+
+        # Trường hợp đặc biệt: TXA đang chạy thay thế explorer.exe trong Windows thường (không phải WinPE)
+        if step == Step.SHELL_REPLACED and not self.is_winpe:
+            choice = messagebox.askyesno(
+                "Phát hiện Shell Thay Thế — TXA WinSetup",
+                "TXA WinSetup đang chạy thay thế Windows Explorer.\n\n"
+                "Môi trường WinPE chưa hoàn tất quá trình cài đặt.\n\n"
+                "• Bấm [Có]  → Khôi phục Windows Explorer (huỷ cài đặt)\n"
+                "• Bấm [Không] → Thử thiết lập lại và boot vào WinPE",
+                icon="warning",
+            )
+            if choice:
+                restore_shell()
+                self.state.clear()
+                try:
+                    _sp.Popen("explorer.exe")
+                except Exception:
+                    pass
+                messagebox.showinfo(
+                    "Đã khôi phục",
+                    "Windows Explorer đã được khôi phục.\n"
+                    "Màn hình desktop sẽ xuất hiện lại trong giây lát."
+                )
+            else:
+                self._tab_bar.set_current(3)
+                self._start_install_process()
+            return
+
         label = STEP_LABELS.get(step, str(step))
         resume = messagebox.askyesno(
             "Tiếp tục cài đặt?",
@@ -1786,6 +1817,13 @@ class TXAWinSetup(tk.Tk):
             self._tab_bar.set_current(3)
             self._start_install_process()
         else:
+            # Nếu shell đã bị thay thế, khôi phục ngay
+            if step >= Step.SHELL_REPLACED:
+                restore_shell()
+                try:
+                    _sp.Popen("explorer.exe")
+                except Exception:
+                    pass
             self.state.clear()
 
     def _load_app_branding(self):
